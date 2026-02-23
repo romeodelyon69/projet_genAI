@@ -12,7 +12,7 @@ from pydub import AudioSegment
 # -----------------------------
 MP3_INPUT = "input.mp3"
 MP3_OUTPUT = "edited.mp3"
-PROMPT = "make it slower, darker, ambient, remove drums"
+PROMPT = "make it slower, darker, ambient and clearer"
 TARGET_SR = 16000
 
 if torch.cuda.is_available():
