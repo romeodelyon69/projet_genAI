@@ -1,11 +1,11 @@
-import torch
-import torchaudio
-import soundfile as sf
+import os
+import tempfile
+
 import numpy as np
+import soundfile as sf
+import torch
 from diffusers import AudioLDMPipeline
 from pydub import AudioSegment
-import tempfile
-import os
 
 # -----------------------------
 # CONFIG
@@ -14,43 +14,50 @@ MP3_INPUT = "input.mp3"
 MP3_OUTPUT = "edited.mp3"
 PROMPT = "make it slower, darker, ambient, remove drums"
 TARGET_SR = 16000
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+    DTYPE = torch.float16
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+    DTYPE = torch.float16
+else:
+    DEVICE = "cpu"
+    DTYPE = torch.float32
 
 # -----------------------------
-# LOAD MP3 → WAV (temp)
+# LOAD MP3 (duration reference)
 # -----------------------------
 audio = AudioSegment.from_mp3(MP3_INPUT)
 audio = audio.set_channels(1).set_frame_rate(TARGET_SR)
 
 samples = np.array(audio.get_array_of_samples()).astype(np.float32)
-samples /= np.iinfo(audio.array_type).max  # normalize to [-1, 1]
-
-waveform = torch.tensor(samples).unsqueeze(0)
+samples /= np.iinfo(audio.array_type).max
+audio_length_in_s = len(samples) / TARGET_SR
 
 # -----------------------------
 # LOAD MODEL
 # -----------------------------
-pipe = AudioLDMPipeline.from_pretrained(
-    "cvssp/audioldm2-music", torch_dtype=torch.float16
-).to(DEVICE)
+pipe = AudioLDMPipeline.from_pretrained("cvssp/audioldm-m-full", torch_dtype=DTYPE).to(
+    DEVICE
+)
 
-pipe.enable_xformers_memory_efficient_attention()
+if DEVICE == "cuda":
+    try:
+        import xformers  # noqa: F401
+
+        pipe.enable_xformers_memory_efficient_attention()
+    except Exception:
+        pass
 
 # -----------------------------
-# AUDIO → LATENT (INVERSION)
-# -----------------------------
-with torch.no_grad():
-    latents = pipe.vae.encode(waveform.to(DEVICE)).latent_dist.sample()
-
-# -----------------------------
-# PROMPT-GUIDED EDITING
+# PROMPT-GUIDED GENERATION
 # -----------------------------
 edited_audio = pipe(
     prompt=PROMPT,
-    latents=latents,
     num_inference_steps=100,
     guidance_scale=4.5,
-    audio_length_in_s=waveform.shape[-1] / TARGET_SR,
+    audio_length_in_s=audio_length_in_s,
 ).audios[0]
 
 # -----------------------------
