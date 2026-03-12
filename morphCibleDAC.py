@@ -52,6 +52,7 @@ def find_best_transition_point(z1, z2, window_size_steps=2000):
     min_dist = float('inf')
     best_idx = (0, 0)
     step = max(1, window_size_steps // 10)
+    
 
     for i in range(0, T1 - window_size_steps, step):
         feat1 = z1[:, :, i : i + window_size_steps]
@@ -64,9 +65,18 @@ def find_best_transition_point(z1, z2, window_size_steps=2000):
     return best_idx
 
 # Choisir chunk latent
-window_size_latents = min(2000, z1.shape[2], z2.shape[2])
+window_size_latents = min(1200, z1.shape[2], z2.shape[2])
 start1, start2 = find_best_transition_point(z1, z2, window_size_steps=window_size_latents)
 print("Meilleure transition:", start1, start2)
+
+latent_len = z1.shape[2]          # longueur du latent
+audio_len = audio1.shape[1]       # longueur audio
+factor = audio_len / latent_len   # combien d'échantillons audio par pas latent
+
+start1_audio = int(start1 * factor)
+start2_audio = int(start2 * factor)
+window_size_latents_audio = int(window_size_latents * factor)
+
 
 # extraire les chunks latents
 z1_chunk = z1[:, :, start1 : start1 + window_size_latents]
@@ -96,34 +106,43 @@ def slerp(zA, zB, t):
 steps = 20  # nombre d’étapes dans la fenêtre de transition
 morph_chunks = []
 
+chunk_cut = window_size_latents // steps
+
 with torch.no_grad():
     prev_chunk_audio = None
     for i in range(steps):
         t = i / (steps - 1)
-        z = slerp(z1_chunk, z2_chunk, t)
-        recon = model.decode(z).squeeze(0).cpu()
-        # crossfade avec chunk précédent
-        if prev_chunk_audio is not None:
-            fade_in = torch.linspace(0, 1, CROSSFADE)
-            fade_out = 1 - fade_in
-            recon[:, :CROSSFADE] = prev_chunk_audio[:, -CROSSFADE:] * fade_out + recon[:, :CROSSFADE] * fade_in
-            morph_chunks.append(recon[:, CROSSFADE:])
-        else:
-            morph_chunks.append(recon)
-        prev_chunk_audio = recon
+        z1_chunk_i = z1_chunk[:, :, i * chunk_cut : (i + 1) * chunk_cut]
+        z2_chunk_i = z2_chunk[:, :, i * chunk_cut : (i + 1) * chunk_cut]
+        z_morph = slerp(z1_chunk_i, z2_chunk_i, t)
+        morph_audio = model.decode(z_morph)
+        morph_audio = morph_audio.squeeze(0).cpu()
+        # if prev_chunk_audio is not None:
+        #     # Crossfade avec le chunk précédent
+        #     morph_audio[:CROSSFADE] = (
+        #         morph_audio[:CROSSFADE] * torch.linspace(0, 1, CROSSFADE) +
+        #         prev_chunk_audio[-CROSSFADE:] * torch.linspace(1, 0, CROSSFADE)
+        #     )
+        morph_chunks.append(morph_audio)
+        prev_chunk_audio = morph_audio
 
 morph_segment = torch.cat(morph_chunks, dim=1)
+
 
 # =========================
 # Construire audio final
 # =========================
-pre_transition = audio1[:, : start1].cpu()
-post_transition = audio2[:, start2 + window_size_latents :].cpu()
+pre_transition = audio1[:, : start1_audio].cpu()
+post_transition = audio2[:, start2_audio + window_size_latents_audio :].cpu()
 
 output_audio = torch.cat([pre_transition, morph_segment, post_transition], dim=1)
 
 # =========================
 # Sauvegarde
 # =========================
+print("durée pre-transition:", pre_transition.shape[1] / SR, "s")
+print("durée morphing:", morph_segment.shape[1] / SR, "s")
+print("durée post-transition:", post_transition.shape[1] / SR, "s")
+
 torchaudio.save("morphing_best_window_crossfade.wav", output_audio, SR)
 print("Morphing terminé → morphing_best_window_crossfade.wav")
