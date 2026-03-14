@@ -207,8 +207,8 @@ class TestManualAttention(unittest.TestCase):
         scale_sharp  = head_dim ** -0.5 * 0.2   # température basse → piqué
         scale_normal = head_dim ** -0.5 * 1.0   # température normale → étalé
 
-        attn_sharp  = F.softmax(logits * scale_sharp,  dim=-1)
-        attn_normal = F.softmax(logits * scale_normal, dim=-1)
+        attn_sharp  = F.softmax(logits / scale_sharp,  dim=-1)
+        attn_normal = F.softmax(logits / scale_normal, dim=-1)
 
         eps = 1e-8
         entropy_sharp  = -(attn_sharp  * (attn_sharp  + eps).log()).sum(-1).mean()

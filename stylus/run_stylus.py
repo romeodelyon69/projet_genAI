@@ -23,14 +23,15 @@ def save_audio(path: str, audio: np.ndarray, sr: int):
 def main():
     # ── Paramètres ────────────────────────────────────────────────────────────
     style    = "chime.wav"
-    content  = "accordion.wav"
+    content  = "violin.wav"
     output   = "stylized_output.wav"
     save_dir = "./stylus_outputs"
     duration = 5.0
 
-    alpha          = 0.5    # style guidance : 0=content pur, 1=style pur
+    alpha          = 1.0    # style guidance : 0=content pur, 1=style pur
+    gamma          = 0.1  # query preservation : 0=Q libre, 1=Q content pur
     steps          = 50
-    up_blocks      = [1, 2, 3]   # couches self-attention ciblées
+    up_blocks      = [2, 3]   # couches self-attention ciblées
     model_id       = "runwayml/stable-diffusion-v1-5"
     device         = "cuda" if torch.cuda.is_available() else "cpu"
     fp32           = False
@@ -38,6 +39,7 @@ def main():
     # ── Config ────────────────────────────────────────────────────────────────
     cfg = StylusConfig(
         alpha=alpha,
+        gamma=gamma,
         num_inference_steps=steps,
         target_up_block_indices=up_blocks,
         model_id=model_id,
