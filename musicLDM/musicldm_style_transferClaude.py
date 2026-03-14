@@ -174,19 +174,30 @@ def vae_decode(z: torch.Tensor, vae, pipe) -> np.ndarray:
 # ─────────────────────────────────────────────
 def encode_prompt_text(prompt: str, pipe, guidance: bool) -> tuple:
     """
-    MusicLDM encode_prompt retourne (prompt_embeds, attention_mask).
-    Pas de generated_prompt_embeds (pas de GPT2).
+    Encode un prompt texte via CLAP text_projection → [B, 512].
+    text_model (768d) + text_projection (768→512) = espace CLAP final.
     """
-    with torch.no_grad():
-        result = pipe._encode_prompt(
-            prompt                      = prompt,
-            device                      = DEVICE,
-            num_waveforms_per_prompt    = 1,
-            do_classifier_free_guidance = guidance,
-        )
-    # MusicLDM retourne (prompt_embeds, attention_mask)
-    return result   # tuple(prompt_embeds, attention_mask)
+    dtype = next(pipe.text_encoder.parameters()).dtype
  
+    def _encode(text):
+        toks = pipe.tokenizer(
+            text, padding="max_length",
+            max_length=pipe.tokenizer.model_max_length,
+            truncation=True, return_tensors="pt",
+        )
+        with torch.no_grad():
+            out    = pipe.text_encoder.text_model(
+                input_ids      = toks["input_ids"].to(DEVICE),
+                attention_mask = toks["attention_mask"].to(DEVICE),
+            )
+            hidden = out.last_hidden_state[:, 0, :]              # [1, 768]
+            return pipe.text_encoder.text_projection(hidden).to(dtype)  # [1, 512]
+ 
+    cond = _encode(prompt)
+    if guidance:
+        uncond = _encode("")
+        cond   = torch.cat([uncond, cond], dim=0)   # [2, 512]
+    return cond, None
  
 def encode_audio_as_prompt(wav: np.ndarray, pipe, guidance: bool) -> tuple:
     """
@@ -222,12 +233,17 @@ def encode_audio_as_prompt(wav: np.ndarray, pipe, guidance: bool) -> tuple:
  
         # CFG : concat (uncond, cond)
         if guidance:
-            p_uncond, _ = pipe._encode_prompt(
-                prompt                      = "",
-                device                      = DEVICE,
-                num_waveforms_per_prompt    = 1,
-                do_classifier_free_guidance = False,
+            toks_u   = pipe.tokenizer(
+                "", padding="max_length",
+                max_length=pipe.tokenizer.model_max_length,
+                truncation=True, return_tensors="pt",
             )
+            out_u  = pipe.text_encoder.text_model(
+                input_ids      = toks_u["input_ids"].to(DEVICE),
+                attention_mask = toks_u["attention_mask"].to(DEVICE),
+            )
+            hidden_u = out_u.last_hidden_state[:, 0, :]
+            p_uncond = pipe.text_encoder.text_projection(hidden_u).to(dtype).unsqueeze(1)  # [1,1,512]
             audio_embed = torch.cat([p_uncond, audio_embed], dim=0)
  
         # attention_mask = None pour CLAP (pas de padding variable)
@@ -247,20 +263,85 @@ def mix_embeddings(embed_prev: torch.Tensor,
  
  
 # ─────────────────────────────────────────────
-# Ajout de bruit (forward diffusion)
+# DDIM Inversion — remonte x0 → x_T exactement
 # ─────────────────────────────────────────────
-def add_noise(z0: torch.Tensor, scheduler, strength: float,
-              n_steps: int) -> tuple[torch.Tensor, int]:
+def ddim_inversion(z0: torch.Tensor, pipe,
+                   prompt_embeds: torch.Tensor,
+                   guidance_scale: float,
+                   n_steps: int,
+                   strength: float) -> tuple[torch.Tensor, int]:
+    """
+    Vraie DDIM inversion : remonte de z0 vers z_T de façon déterministe.
+    Utilise le même UNet que le débruitage mais en sens inverse.
+ 
+    Contrairement à add_noise (aléatoire), l'inversion est exacte :
+    le z_T obtenu, une fois redescendu avec le même prompt, redonne z0.
+    Changer le prompt à la descente donne le style transfer.
+ 
+    strength contrôle jusqu'où on remonte :
+        1.0 → remonte jusqu'à T (perd tout le contenu)
+        0.5 → remonte jusqu'à T/2 (compromis contenu/style)
+        0.3 → remonte peu (proche de l'original)
+    """
+    scheduler = pipe.scheduler
     scheduler.set_timesteps(n_steps, device=DEVICE)
-    t_start  = max(1, int(n_steps * strength))
-    timestep = scheduler.timesteps[n_steps - t_start]
-    noise    = torch.randn_like(z0)
-    z_noisy  = scheduler.add_noise(
-        z0.float(), noise.float(), timestep.unsqueeze(0)
-    ).to(z0.dtype)
-    print(f"        strength={strength:.2f} → timestep={timestep.item()}, "
-          f"{t_start}/{n_steps} steps bruités")
-    return z_noisy, n_steps - t_start
+ 
+    # Nombre de steps d'inversion
+    t_start   = max(1, int(n_steps * strength))
+    # On inverse sur les t_start premiers timesteps (du moins bruité au plus bruité)
+    inversion_timesteps = scheduler.timesteps[n_steps - t_start:].flip(0)
+ 
+    do_cfg = guidance_scale > 1.0
+    dtype  = next(pipe.unet.parameters()).dtype
+    z      = z0.clone().to(dtype)
+ 
+    print(f"        DDIM inversion : strength={strength:.2f} "
+          f"→ {t_start} steps remontés sur {n_steps}")
+ 
+    for t in inversion_timesteps:
+        z_input = torch.cat([z, z]) if do_cfg else z
+ 
+        with torch.no_grad():
+            p = prompt_embeds.to(dtype)
+            batch_size = z_input.shape[0]
+            if p.dim() == 1:
+                p = p.unsqueeze(0).expand(batch_size, -1)
+            elif p.dim() == 2 and p.shape[0] != batch_size:
+                p = p.expand(batch_size, -1)
+            elif p.dim() == 3:
+                p = p.squeeze(1)
+ 
+            noise_pred = pipe.unet(
+                z_input.to(dtype),
+                t,
+                encoder_hidden_states = None,
+                class_labels          = p,
+            ).sample
+ 
+        if do_cfg:
+            noise_uncond, noise_cond = noise_pred.chunk(2)
+            noise_pred = noise_uncond + guidance_scale * (noise_cond - noise_uncond)
+ 
+        # alphas_cumprod est sur CPU — on indexe sur CPU puis on déplace
+        t_cpu             = t.cpu()
+        alpha_prod_t      = scheduler.alphas_cumprod[t_cpu].to(DEVICE)
+ 
+        # Trouver le prochain timestep dans la séquence d'inversion
+        inv_cpu = inversion_timesteps.cpu()
+        idx     = (inv_cpu == t_cpu).nonzero(as_tuple=True)[0]
+        if idx < len(inv_cpu) - 1:
+            alpha_prod_t_prev = scheduler.alphas_cumprod[inv_cpu[idx + 1]].to(DEVICE)
+        else:
+            alpha_prod_t_prev = torch.tensor(1.0, device=DEVICE)
+ 
+        # Formule DDIM inverse :
+        # z_{t+1} = √ᾱ_{t+1} · (z_t - √(1-ᾱ_t)·ε) / √ᾱ_t + √(1-ᾱ_{t+1})·ε
+        x0_pred = (z - (1 - alpha_prod_t).sqrt() * noise_pred) / alpha_prod_t.sqrt()
+        z = alpha_prod_t_prev.sqrt() * x0_pred + (1 - alpha_prod_t_prev).sqrt() * noise_pred
+ 
+    t_denoise_start = n_steps - t_start
+    print(f"        Inversion terminée → débruitage depuis step {t_denoise_start}")
+    return z, t_denoise_start
  
  
 # ─────────────────────────────────────────────
@@ -393,10 +474,13 @@ def main(input_path: str, prompt: str, output_dir: str,
  
         mel    = audio_to_mel(chunk)
         z0     = vae_encode(mel, vae)
-        z_n, t = add_noise(z0, pipe.scheduler, strength, n_steps)
-        z_out  = guided_denoise(z_n, t, pipe, guidance_scale, n_steps,
-                                p_mixed, p_mask_text,
-                                )
+        # DDIM inversion exacte (remonte z0 → z_t de façon déterministe)
+        z_inv, t_start = ddim_inversion(
+            z0, pipe, p_mixed, guidance_scale, n_steps, strength
+        )
+        # Débruitage guidé par le prompt cible (descend z_t → z0_styled)
+        z_out  = guided_denoise(z_inv, t_start, pipe, guidance_scale, n_steps,
+                                p_mixed, p_mask_text)
         wav_out = vae_decode(z_out, vae, pipe)
  
         # Encoder la sortie via CLAP audio pour le prochain chunk
@@ -433,12 +517,13 @@ def main(input_path: str, prompt: str, output_dir: str,
     --guidance   3-5     → bon compromis
                  7+      → prompt très contraignant
 """)
-    
+ 
+ 
 if __name__ == "__main__":
-    music_path = "./musique/music4.wav"  # chemin par défaut
-    style_prompt = "sombre, noir, dark"  # prompt par défaut
+    music_path = "./musique/music1.wav"  # chemin par défaut
+    style_prompt = "electric guitar, energetic"  # prompt par défaut
     output_dir = "./encode_decode"  # répertoire de sortie par défaut
-    strength = 1.0 # force du style par défaut
+    strength = 0.4 # force du style par défaut
     guidance = 5.0  # guidance scale par défaut
     steps = 50
     main(music_path, style_prompt, output_dir, strength, guidance, steps)
