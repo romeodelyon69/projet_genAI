@@ -1,0 +1,17 @@
+Rapport encode/decode mel
+==================================================
+
+Source : relax.wav  |  5.0s @ 22050Hz
+
+Metriques (mel_corr: 1=parfait | lsd: 0=parfait | rms_diff: 0=meme volume)
+--------------------------------------------------
+
+  (A) HiFi-GAN natif
+    mel_corr = 0.8731
+    lsd      = 8.96 dB
+    rms_diff = +3.70 dB
+
+  (C) Griffin-Lim (phase content)
+    mel_corr = 0.9957
+    lsd      = 1.15 dB
+    rms_diff = -0.44 dB

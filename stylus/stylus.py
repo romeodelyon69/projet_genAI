@@ -265,64 +265,140 @@ class AudioProcessor:
         img = image[0].float().cpu().numpy().mean(axis=0)
         return ((img + 1.0) / 2.0).clip(0.0, 1.0)
 
-    def phase_preserving_reconstruct(
+    # def phase_preserving_reconstruct(
+    #     self, mel_db_stylized: np.ndarray, content_stft: np.ndarray
+    # ) -> np.ndarray:
+    #     """
+    #     Spectral envelope transfer + phase du content.
+    #     On n'inverse pas la filterbank (instable) : on calcule le ratio
+    #     d'enveloppe spectrale style/content et on l'applique sur la
+    #     magnitude STFT du content.
+    #     """
+    #     cfg = self.cfg
+    #     librosa = self.librosa
+
+    #     mag_content = np.abs(content_stft)
+    #     T_stft = content_stft.shape[1]
+
+    #     mel_fb = librosa.filters.mel(
+    #         sr=cfg.sample_rate,
+    #         n_fft=cfg.n_fft,
+    #         n_mels=cfg.n_mels,
+    #         fmin=cfg.fmin,
+    #         fmax=cfg.fmax,
+    #     )
+
+    #     # Enveloppe mel du content
+    #     mel_content_amp = np.sqrt(np.maximum(mel_fb @ (mag_content**2), 1e-10))
+
+    #     # Amplitude mel stylisée → aligner temporellement
+    #     mel_style_amp = librosa.db_to_amplitude(mel_db_stylized)
+    #     T_mel = mel_style_amp.shape[1]
+    #     if T_mel != T_stft:
+    #         import torch as _t, torch.nn.functional as _F
+
+    #         tt = _t.from_numpy(mel_style_amp).float().unsqueeze(0).unsqueeze(0)
+    #         tt = _F.interpolate(
+    #             tt, size=(cfg.n_mels, T_stft), mode="bilinear", align_corners=False
+    #         )
+    #         mel_style_amp = tt.squeeze().numpy()
+
+    #     # Ratio spectral
+    #     ratio_mel = mel_style_amp / (mel_content_amp + 1e-10)
+
+    #     from scipy.ndimage import uniform_filter1d
+
+    #     ratio_mel = uniform_filter1d(ratio_mel, size=5, axis=1)
+
+    #     # Projeter ratio mel → STFT
+    #     mel_fb_norm = mel_fb / (mel_fb.sum(axis=0, keepdims=True) + 1e-10)
+    #     ratio_stft = np.clip(mel_fb_norm.T @ ratio_mel, 0.0, 10.0)
+
+    #     # Magnitude stylisée × phase content
+    #     stft_stylized = (mag_content * ratio_stft) * np.exp(1j * np.angle(content_stft))
+
+    #     audio = librosa.istft(
+    #         stft_stylized,
+    #         n_fft=cfg.n_fft,
+    #         hop_length=cfg.hop_length,
+    #         window="hann",
+    #         center=True,
+    #     )
+    #     return audio.astype(np.float32)
+
+     def phase_preserving_reconstruct(
         self, mel_db_stylized: np.ndarray, content_stft: np.ndarray
     ) -> np.ndarray:
         """
-        Spectral envelope transfer + phase du content.
-        On n'inverse pas la filterbank (instable) : on calcule le ratio
-        d'enveloppe spectrale style/content et on l'applique sur la
-        magnitude STFT du content.
+        Reconstruction directe depuis le mel stylisé.
+ 
+        Ancienne approche (spectral envelope transfer) :
+          mag_stylized = mag_content * ratio  ← ancré sur le content
+          → le style ne peut jamais dominer, même avec alpha=1 / gamma=0
+ 
+        Approche correcte :
+          1. Mel stylisé → magnitude STFT directement (transposée pondérée)
+          2. Phase du content comme initialisation GL (ancre le timing)
+          3. 8 itérations GL pour la cohérence STFT
+ 
+        La magnitude vient entièrement du mel stylisé.
+        La phase du content ancre le rythme sans imposer sa magnitude.
         """
         cfg = self.cfg
         librosa = self.librosa
-
-        mag_content = np.abs(content_stft)
+ 
         T_stft = content_stft.shape[1]
-
-        mel_fb = librosa.filters.mel(
-            sr=cfg.sample_rate,
-            n_fft=cfg.n_fft,
-            n_mels=cfg.n_mels,
-            fmin=cfg.fmin,
-            fmax=cfg.fmax,
-        )
-
-        # Enveloppe mel du content
-        mel_content_amp = np.sqrt(np.maximum(mel_fb @ (mag_content**2), 1e-10))
-
-        # Amplitude mel stylisée → aligner temporellement
-        mel_style_amp = librosa.db_to_amplitude(mel_db_stylized)
-        T_mel = mel_style_amp.shape[1]
+ 
+        # 1. Mel dB → amplitude mel
+        mel_amp = librosa.db_to_amplitude(mel_db_stylized)
+ 
+        # Aligner temporellement
+        T_mel = mel_amp.shape[1]
         if T_mel != T_stft:
             import torch as _t, torch.nn.functional as _F
-
-            tt = _t.from_numpy(mel_style_amp).float().unsqueeze(0).unsqueeze(0)
-            tt = _F.interpolate(
-                tt, size=(cfg.n_mels, T_stft), mode="bilinear", align_corners=False
-            )
-            mel_style_amp = tt.squeeze().numpy()
-
-        # Ratio spectral
-        ratio_mel = mel_style_amp / (mel_content_amp + 1e-10)
-
-        from scipy.ndimage import uniform_filter1d
-
-        ratio_mel = uniform_filter1d(ratio_mel, size=5, axis=1)
-
-        # Projeter ratio mel → STFT
+            tt = _t.from_numpy(mel_amp).float().unsqueeze(0).unsqueeze(0)
+            tt = _F.interpolate(tt, size=(cfg.n_mels, T_stft),
+                                mode="bilinear", align_corners=False)
+            mel_amp = tt.squeeze().numpy()
+ 
+        # 2. Amplitude mel → magnitude STFT via transposée pondérée
+        mel_fb = librosa.filters.mel(
+            sr=cfg.sample_rate, n_fft=cfg.n_fft,
+            n_mels=cfg.n_mels, fmin=cfg.fmin, fmax=cfg.fmax,
+        )
         mel_fb_norm = mel_fb / (mel_fb.sum(axis=0, keepdims=True) + 1e-10)
-        ratio_stft = np.clip(mel_fb_norm.T @ ratio_mel, 0.0, 10.0)
-
-        # Magnitude stylisée × phase content
-        stft_stylized = (mag_content * ratio_stft) * np.exp(1j * np.angle(content_stft))
-
+        mag_stft = np.maximum(mel_fb_norm.T @ mel_amp, 0.0)
+ 
+        # Supprimer artefacts HF au-delà de fmax
+        freqs = np.linspace(0, cfg.sample_rate / 2, mag_stft.shape[0])
+        rolloff = cfg.fmax if cfg.fmax > 0 else cfg.sample_rate / 2
+        mask = np.where(freqs <= rolloff, 1.0,
+                        np.maximum(0.0, 1.0 - (freqs - rolloff) / 500.0))
+        mag_stft = mag_stft * mask[:, np.newaxis]
+ 
+        # 3. Griffin-Lim initialisé avec la phase du content
+        phase_init = np.angle(content_stft)
+        stft_cur = mag_stft * np.exp(1j * phase_init)
+ 
+        target_len = librosa.istft(
+            content_stft, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
+            window='hann', center=True,
+        ).shape[0]
+ 
+        for _ in range(8):
+            audio_tmp = librosa.istft(
+                stft_cur, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
+                window='hann', center=True, length=target_len,
+            )
+            stft_cur = librosa.stft(
+                audio_tmp, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
+                window='hann', center=True,
+            )
+            stft_cur = mag_stft * np.exp(1j * np.angle(stft_cur))
+ 
         audio = librosa.istft(
-            stft_stylized,
-            n_fft=cfg.n_fft,
-            hop_length=cfg.hop_length,
-            window="hann",
-            center=True,
+            stft_cur, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
+            window='hann', center=True, length=target_len,
         )
         return audio.astype(np.float32)
 
