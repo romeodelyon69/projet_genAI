@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class StylusConfig:
     # γ : query preservation — contrôle comment la query "regarde"
@@ -61,6 +62,7 @@ class StylusConfig:
 # AttentionStore — stocke Q_content, K_style, V_style par timestep
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class AttentionStore:
     """
     Modes :
@@ -75,9 +77,9 @@ class AttentionStore:
         self.current_t: int = 0
         self.gamma: float = 0.8
         self.alpha: float = 0.5
-        self._qs: dict = {}   # Q content  : (layer, t) → tensor
-        self._ks: dict = {}   # K style    : (layer, t) → tensor
-        self._vs: dict = {}   # V style    : (layer, t) → tensor
+        self._qs: dict = {}  # Q content  : (layer, t) → tensor
+        self._ks: dict = {}  # K style    : (layer, t) → tensor
+        self._vs: dict = {}  # V style    : (layer, t) → tensor
 
     def set_timestep(self, t):
         self.current_t = int(t)
@@ -103,12 +105,15 @@ class AttentionStore:
         return self._qs.get(key)
 
     def clear(self):
-        self._qs.clear(); self._ks.clear(); self._vs.clear()
+        self._qs.clear()
+        self._ks.clear()
+        self._vs.clear()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # StylusAttnProcessor — query preservation + injection K/V
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class StylusAttnProcessor:
     """
@@ -136,8 +141,8 @@ class StylusAttnProcessor:
         **kwargs,
     ) -> torch.Tensor:
 
-        is_self = (encoder_hidden_states is None)
-        kv_src  = hidden_states if is_self else encoder_hidden_states
+        is_self = encoder_hidden_states is None
+        kv_src = hidden_states if is_self else encoder_hidden_states
 
         q = attn.head_to_batch_dim(attn.to_q(hidden_states))
         k = attn.head_to_batch_dim(attn.to_k(kv_src))
@@ -154,7 +159,7 @@ class StylusAttnProcessor:
 
             elif store.mode == "inject":
                 ks, vs = store.get_style_kv(self.layer_name)
-                qc     = store.get_content_q(self.layer_name)
+                qc = store.get_content_q(self.layer_name)
 
                 if ks is not None and qc is not None:
                     # Query preservation : Q_bar = γ*Q_content + (1-γ)*Q_current
@@ -164,8 +169,8 @@ class StylusAttnProcessor:
                     #   out_content = Attn(Q_bar, K_content, V_content)  ← structure
                     #   out_style   = Attn(Q_bar, K_style,  V_style)     ← texture
                     #   out = out_content + α * (out_style - out_content)
-                    out_content = self._attn(q_bar, k, v,   attn, attention_mask)
-                    out_style   = self._attn(q_bar, ks, vs, attn, attention_mask)
+                    out_content = self._attn(q_bar, k, v, attn, attention_mask)
+                    out_style = self._attn(q_bar, ks, vs, attn, attention_mask)
                     out = out_content + store.alpha * (out_style - out_content)
                     out = attn.to_out[0](out)
                     out = attn.to_out[1](out)
@@ -191,6 +196,7 @@ class StylusAttnProcessor:
 # AdaIN sur les latents
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def adain_latent(z_content: torch.Tensor, z_style: torch.Tensor) -> torch.Tensor:
     """
     AdaIN(z_content, z_style) = σ(z_style) * (z_content - μ(z_content)) / σ(z_content) + μ(z_style)
@@ -198,10 +204,10 @@ def adain_latent(z_content: torch.Tensor, z_style: torch.Tensor) -> torch.Tensor
     """
     eps = 1e-5
     # Moments sur H×W
-    mu_c  = z_content.mean(dim=[2, 3], keepdim=True)
-    sig_c = z_content.std(dim=[2, 3],  keepdim=True) + eps
-    mu_s  = z_style.mean(dim=[2, 3],   keepdim=True)
-    sig_s = z_style.std(dim=[2, 3],    keepdim=True) + eps
+    mu_c = z_content.mean(dim=[2, 3], keepdim=True)
+    sig_c = z_content.std(dim=[2, 3], keepdim=True) + eps
+    mu_s = z_style.mean(dim=[2, 3], keepdim=True)
+    sig_s = z_style.std(dim=[2, 3], keepdim=True) + eps
     return sig_s * (z_content - mu_c) / sig_c + mu_s
 
 
@@ -209,12 +215,13 @@ def adain_latent(z_content: torch.Tensor, z_style: torch.Tensor) -> torch.Tensor
 # AudioProcessor
 # ─────────────────────────────────────────────────────────────────────────────
 
-class AudioProcessor:
 
+class AudioProcessor:
     def __init__(self, cfg: StylusConfig):
         self.cfg = cfg
         try:
             import librosa
+
             self.librosa = librosa
         except ImportError:
             raise ImportError("pip install librosa")
@@ -222,15 +229,21 @@ class AudioProcessor:
     def audio_to_mel_and_phase(self, audio: np.ndarray):
         cfg = self.cfg
         stft = self.librosa.stft(
-            audio, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
-            window='hann', center=True,
+            audio,
+            n_fft=cfg.n_fft,
+            hop_length=cfg.hop_length,
+            window="hann",
+            center=True,
         )
         magnitude = np.abs(stft)
         mel_fb = self.librosa.filters.mel(
-            sr=cfg.sample_rate, n_fft=cfg.n_fft,
-            n_mels=cfg.n_mels, fmin=cfg.fmin, fmax=cfg.fmax,
+            sr=cfg.sample_rate,
+            n_fft=cfg.n_fft,
+            n_mels=cfg.n_mels,
+            fmin=cfg.fmin,
+            fmax=cfg.fmax,
         )
-        mel_db = self.librosa.power_to_db(mel_fb @ (magnitude ** 2), ref=np.max)
+        mel_db = self.librosa.power_to_db(mel_fb @ (magnitude**2), ref=np.max)
         return mel_db, stft
 
     def mel_to_image(self, mel_db: np.ndarray) -> torch.Tensor:
@@ -238,8 +251,12 @@ class AudioProcessor:
         mel_min, mel_max = mel_db.min(), mel_db.max()
         mel_norm = (mel_db - mel_min) / (mel_max - mel_min + 1e-8)
         t = torch.from_numpy(mel_norm).float().unsqueeze(0).unsqueeze(0)
-        t = F.interpolate(t, size=(cfg.n_mels, cfg.target_length),
-                          mode='bilinear', align_corners=False)
+        t = F.interpolate(
+            t,
+            size=(cfg.n_mels, cfg.target_length),
+            mode="bilinear",
+            align_corners=False,
+        )
         t = t.repeat(1, 3, 1, 1)
         return t * 2.0 - 1.0
 
@@ -264,27 +281,33 @@ class AudioProcessor:
         T_stft = content_stft.shape[1]
 
         mel_fb = librosa.filters.mel(
-            sr=cfg.sample_rate, n_fft=cfg.n_fft,
-            n_mels=cfg.n_mels, fmin=cfg.fmin, fmax=cfg.fmax,
+            sr=cfg.sample_rate,
+            n_fft=cfg.n_fft,
+            n_mels=cfg.n_mels,
+            fmin=cfg.fmin,
+            fmax=cfg.fmax,
         )
 
         # Enveloppe mel du content
-        mel_content_amp = np.sqrt(np.maximum(mel_fb @ (mag_content ** 2), 1e-10))
+        mel_content_amp = np.sqrt(np.maximum(mel_fb @ (mag_content**2), 1e-10))
 
         # Amplitude mel stylisée → aligner temporellement
         mel_style_amp = librosa.db_to_amplitude(mel_db_stylized)
         T_mel = mel_style_amp.shape[1]
         if T_mel != T_stft:
             import torch as _t, torch.nn.functional as _F
+
             tt = _t.from_numpy(mel_style_amp).float().unsqueeze(0).unsqueeze(0)
-            tt = _F.interpolate(tt, size=(cfg.n_mels, T_stft),
-                                mode="bilinear", align_corners=False)
+            tt = _F.interpolate(
+                tt, size=(cfg.n_mels, T_stft), mode="bilinear", align_corners=False
+            )
             mel_style_amp = tt.squeeze().numpy()
 
         # Ratio spectral
         ratio_mel = mel_style_amp / (mel_content_amp + 1e-10)
 
         from scipy.ndimage import uniform_filter1d
+
         ratio_mel = uniform_filter1d(ratio_mel, size=5, axis=1)
 
         # Projeter ratio mel → STFT
@@ -295,45 +318,69 @@ class AudioProcessor:
         stft_stylized = (mag_content * ratio_stft) * np.exp(1j * np.angle(content_stft))
 
         audio = librosa.istft(
-            stft_stylized, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
-            window='hann', center=True,
+            stft_stylized,
+            n_fft=cfg.n_fft,
+            hop_length=cfg.hop_length,
+            window="hann",
+            center=True,
         )
         return audio.astype(np.float32)
 
     def save_mel_image(self, mel_db, path, title=""):
-        import matplotlib; matplotlib.use("Agg")
+        import matplotlib
+
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         cfg = self.cfg
         dur = mel_db.shape[1] * cfg.hop_length / cfg.sample_rate
         fig, ax = plt.subplots(figsize=(10, 4))
-        im = ax.imshow(mel_db, origin='lower', aspect='auto', cmap='magma',
-                       extent=[0, dur, cfg.fmin, cfg.fmax])
-        ax.set_xlabel("Temps (s)"); ax.set_ylabel("Fréquence (Hz)")
+        im = ax.imshow(
+            mel_db,
+            origin="lower",
+            aspect="auto",
+            cmap="magma",
+            extent=[0, dur, cfg.fmin, cfg.fmax],
+        )
+        ax.set_xlabel("Temps (s)")
+        ax.set_ylabel("Fréquence (Hz)")
         fig.colorbar(im, ax=ax, format="%+2.0f dB").set_label("dB")
-        if title: ax.set_title(title, fontweight="bold")
+        if title:
+            ax.set_title(title, fontweight="bold")
         plt.tight_layout()
-        plt.savefig(path, dpi=150, bbox_inches='tight')
+        plt.savefig(path, dpi=150, bbox_inches="tight")
         plt.close(fig)
         print(f"  Saved: {path}")
 
     def save_comparison(self, mel_s, mel_c, mel_out, path):
-        import matplotlib; matplotlib.use("Agg")
+        import matplotlib
+
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         fig, axes = plt.subplots(1, 3, figsize=(18, 4))
         mels = [mel_s, mel_c, mel_out]
         titles = ["Style", "Content", "Stylized output"]
-        vmin = min(m.min() for m in mels); vmax = max(m.max() for m in mels)
+        vmin = min(m.min() for m in mels)
+        vmax = max(m.max() for m in mels)
         cfg = self.cfg
         for ax, mel, title in zip(axes, mels, titles):
             dur = mel.shape[1] * cfg.hop_length / cfg.sample_rate
-            im = ax.imshow(mel, origin='lower', aspect='auto', cmap='magma',
-                           extent=[0, dur, cfg.fmin, cfg.fmax],
-                           vmin=vmin, vmax=vmax)
-            ax.set_title(title, fontweight='bold')
-            ax.set_xlabel("Temps (s)"); ax.set_ylabel("Fréquence (Hz)")
+            im = ax.imshow(
+                mel,
+                origin="lower",
+                aspect="auto",
+                cmap="magma",
+                extent=[0, dur, cfg.fmin, cfg.fmax],
+                vmin=vmin,
+                vmax=vmax,
+            )
+            ax.set_title(title, fontweight="bold")
+            ax.set_xlabel("Temps (s)")
+            ax.set_ylabel("Fréquence (Hz)")
         fig.colorbar(im, ax=axes, format="%+2.0f dB", shrink=0.8, label="dB")
         plt.tight_layout()
-        plt.savefig(path, dpi=150, bbox_inches='tight')
+        plt.savefig(path, dpi=150, bbox_inches="tight")
         plt.close(fig)
         print(f"  Saved: {path}")
 
@@ -342,11 +389,11 @@ class AudioProcessor:
 # Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
 
-class StylusPipeline:
 
+class StylusPipeline:
     def __init__(self, cfg: Optional[StylusConfig] = None):
-        self.cfg   = cfg or StylusConfig()
-        self.proc  = AudioProcessor(self.cfg)
+        self.cfg = cfg or StylusConfig()
+        self.proc = AudioProcessor(self.cfg)
         self.store = AttentionStore()
         self.store.gamma = self.cfg.gamma
         self.store.alpha = self.cfg.alpha
@@ -354,10 +401,13 @@ class StylusPipeline:
 
     def load_model(self):
         from diffusers import StableDiffusionPipeline, DDIMScheduler
+
         print(f"Loading {self.cfg.model_id} ...")
         pipe = StableDiffusionPipeline.from_pretrained(
-            self.cfg.model_id, torch_dtype=self.cfg.dtype,
-            safety_checker=None, requires_safety_checker=False,
+            self.cfg.model_id,
+            torch_dtype=self.cfg.dtype,
+            safety_checker=None,
+            requires_safety_checker=False,
         )
         pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
         pipe = pipe.to(self.cfg.device)
@@ -371,7 +421,9 @@ class StylusPipeline:
     def _install_processors(self):
         installed = 0
         for name, module in self._pipe.unet.named_modules():
-            if not any(f"up_blocks.{i}." in name for i in self.cfg.target_up_block_indices):
+            if not any(
+                f"up_blocks.{i}." in name for i in self.cfg.target_up_block_indices
+            ):
                 continue
             if not name.endswith("attn1"):
                 continue
@@ -379,7 +431,9 @@ class StylusPipeline:
             installed += 1
         print(f"StylusAttnProcessor installé sur {installed} couches.")
         if installed == 0:
-            raise RuntimeError("Aucune couche trouvée — vérifier target_up_block_indices.")
+            raise RuntimeError(
+                "Aucune couche trouvée — vérifier target_up_block_indices."
+            )
 
     @torch.no_grad()
     def _encode(self, image: torch.Tensor) -> torch.Tensor:
@@ -407,7 +461,7 @@ class StylusPipeline:
         """
         sched = self._pipe.scheduler
         sched.set_timesteps(self.cfg.num_inference_steps)
-        timesteps = sched.timesteps.flip(0)   # 0 → T
+        timesteps = sched.timesteps.flip(0)  # 0 → T
         alphas = sched.alphas_cumprod.to(z0.device)
         zt = z0.clone()
         stride = sched.config.num_train_timesteps // self.cfg.num_inference_steps
@@ -415,11 +469,12 @@ class StylusPipeline:
             self.store.set_timestep(int(t))
             eps = self._pipe.unet(zt, t, encoder_hidden_states=emb).sample
             t_next = min(int(t) + stride, sched.config.num_train_timesteps - 1)
-            a_t = alphas[int(t)]; a_n = alphas[t_next]
+            a_t = alphas[int(t)]
+            a_n = alphas[t_next]
             x0 = (zt - (1 - a_t).sqrt() * eps) / a_t.sqrt().clamp(min=1e-8)
             zt = a_n.sqrt() * x0 + (1 - a_n).sqrt() * eps
             if (i + 1) % 10 == 0:
-                print(f"  [{label}] inversion {i+1}/{len(timesteps)}")
+                print(f"  [{label}] inversion {i + 1}/{len(timesteps)}")
         return zt
 
     @torch.no_grad()
@@ -436,7 +491,7 @@ class StylusPipeline:
             eps = self._pipe.unet(zt, t, encoder_hidden_states=emb).sample
             zt = sched.step(eps, t, zt).prev_sample
             if (i + 1) % 10 == 0:
-                print(f"  [{label}] denoising {i+1}/{len(sched.timesteps)}")
+                print(f"  [{label}] denoising {i + 1}/{len(sched.timesteps)}")
         return zt
 
     def transfer(
@@ -461,8 +516,12 @@ class StylusPipeline:
         img_c = self.proc.mel_to_image(mel_c).to(self.cfg.device, dtype=self.cfg.dtype)
 
         if save_dir:
-            self.proc.save_mel_image(mel_s, os.path.join(save_dir, "mel_style.png"),   "Style")
-            self.proc.save_mel_image(mel_c, os.path.join(save_dir, "mel_content.png"), "Content")
+            self.proc.save_mel_image(
+                mel_s, os.path.join(save_dir, "mel_style.png"), "Style"
+            )
+            self.proc.save_mel_image(
+                mel_c, os.path.join(save_dir, "mel_content.png"), "Content"
+            )
 
         # ── 2. VAE encode ─────────────────────────────────────────────────────
         print("[2/5] VAE encode...")
@@ -495,9 +554,14 @@ class StylusPipeline:
 
         # Resize + re-normaliser avec les stats du content
         import torch as _t, torch.nn.functional as _F
+
         tt = _t.from_numpy(mel_norm).float().unsqueeze(0).unsqueeze(0)
-        tt = _F.interpolate(tt, size=(mel_c.shape[0], mel_c.shape[1]),
-                            mode='bilinear', align_corners=False)
+        tt = _F.interpolate(
+            tt,
+            size=(mel_c.shape[0], mel_c.shape[1]),
+            mode="bilinear",
+            align_corners=False,
+        )
         mel_norm_r = tt.squeeze().numpy()
         c_min, c_max = mel_c.min(), mel_c.max()
         mel_out = mel_norm_r * (c_max - c_min) + c_min
@@ -507,11 +571,12 @@ class StylusPipeline:
         audio_out = self.proc.phase_preserving_reconstruct(mel_out, stft_c)
 
         if save_dir:
-            self.proc.save_mel_image(mel_out,
-                                     os.path.join(save_dir, "mel_stylized.png"),
-                                     "Stylized output")
-            self.proc.save_comparison(mel_s, mel_c, mel_out,
-                                      os.path.join(save_dir, "mel_comparison.png"))
+            self.proc.save_mel_image(
+                mel_out, os.path.join(save_dir, "mel_stylized.png"), "Stylized output"
+            )
+            self.proc.save_comparison(
+                mel_s, mel_c, mel_out, os.path.join(save_dir, "mel_comparison.png")
+            )
 
         print("Done!")
         return audio_out

@@ -1,9 +1,16 @@
+import os
 import numpy as np
 import torch
 import soundfile as sf
 import librosa
 
 from stylus import StylusConfig, StylusPipeline
+from best_of_n import generate_candidates
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Audio I/O
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def load_audio(path: str, target_sr: int, duration: float = 5.0) -> np.ndarray:
@@ -20,26 +27,40 @@ def save_audio(path: str, audio: np.ndarray, sr: int):
     print(f"Saved: {path}")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 def main():
-    # ── Paramètres ────────────────────────────────────────────────────────────
-    style    = "chime.wav"
-    content  = "violin.wav"
-    output   = "stylized_output.wav"
-    save_dir = "./stylus_outputs"
+    # ── Fichiers audio ────────────────────────────────────────────────────────
+    style = "music/chime.wav"
+    content = "music/violin.wav"
+    save_dir = "../test_outputs/stylus_grid64"
     duration = 5.0
 
-    alpha          = 1.0    # style guidance : 0=content pur, 1=style pur
-    gamma          = 0.1  # query preservation : 0=Q libre, 1=Q content pur
-    steps          = 50
-    up_blocks      = [2, 3]   # couches self-attention ciblées
-    model_id       = "runwayml/stable-diffusion-v1-5"
-    device         = "cuda" if torch.cuda.is_available() else "cpu"
-    fp32           = False
+    # ── Scores ────────────────────────────────────────────────────────────────
+    lam = 0.5  # λ pour combined_score
 
-    # ── Config ────────────────────────────────────────────────────────────────
+    # ── Grille 8×8 = 64 candidats ─────────────────────────────────────────────
+    alphas = list(np.linspace(0.25, 1.0, 8).round(3))  # style guidance
+    gammas = list(np.linspace(0.02, 0.30, 8).round(3))  # query preservation
+
+    # ── Config modèle ─────────────────────────────────────────────────────────
+    steps = 50
+    up_blocks = [2, 3]
+    model_id = "runwayml/stable-diffusion-v1-5"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    fp32 = False
+
     cfg = StylusConfig(
-        alpha=alpha,
-        gamma=gamma,
+        alpha=alphas[0],
+        gamma=gammas[0],
         num_inference_steps=steps,
         target_up_block_indices=up_blocks,
         model_id=model_id,
@@ -50,27 +71,23 @@ def main():
     # ── Chargement audio ──────────────────────────────────────────────────────
     print(f"Loading style  : {style}")
     print(f"Loading content: {content}")
-    style_audio   = load_audio(style,   cfg.sample_rate, duration)
+    style_audio = load_audio(style, cfg.sample_rate, duration)
     content_audio = load_audio(content, cfg.sample_rate, duration)
 
-    print(f"\nConfig:")
-    print(f"  α (style guidance)   = {cfg.alpha}")
-    print(f"  DDIM steps           = {cfg.num_inference_steps}")
-    print(f"  Target up_blocks     = {cfg.target_up_block_indices}")
-    print(f"  Device               = {cfg.device} / {cfg.dtype}")
-    print()
-
-    # ── Pipeline ──────────────────────────────────────────────────────────────
+    # ── Pipeline (modèle chargé une seule fois) ───────────────────────────────
     pipeline = StylusPipeline(cfg)
     pipeline.load_model()
 
-    output_audio = pipeline.transfer(
+    # ── Grid search sur 64 candidats (α × γ) ─────────────────────────────────
+    candidates = generate_candidates(
+        pipeline,
         style_audio,
         content_audio,
         save_dir=save_dir,
+        lam=lam,
+        alphas=alphas,
+        gammas=gammas,
     )
-
-    save_audio(output, output_audio, cfg.sample_rate)
 
 
 if __name__ == "__main__":
