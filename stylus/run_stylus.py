@@ -34,9 +34,9 @@ def save_audio(path: str, audio: np.ndarray, sr: int):
 
 def main():
     # ── Fichiers audio ────────────────────────────────────────────────────────
-    style = "music/chime.wav"
-    content = "music/violin.wav"
-    save_dir = "../test_outputs/stylus_grid64"
+    style = "musicTI_dataset/audios/timbre/chime/chime1.wav"
+    content = "musicTI_dataset/audios/content/violin/violin1.wav"
+    save_dir = "./test_outputs/stylus_grid64"
     duration = 5.0
 
     # ── Scores ────────────────────────────────────────────────────────────────

@@ -326,7 +326,7 @@ class AudioProcessor:
     #     )
     #     return audio.astype(np.float32)
 
-     def phase_preserving_reconstruct(
+    def phase_preserving_reconstruct(
         self, mel_db_stylized: np.ndarray, content_stft: np.ndarray
     ) -> np.ndarray:
         """
