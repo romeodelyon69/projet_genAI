@@ -338,11 +338,11 @@ def plot_bon_curves(
 if __name__ == "__main__":
     # ── Parameters ───────────────────────────────────────────────────────────
     content_path = "./music4.wav"
-    style_path = "./musicTI_dataset/timbre/bird/bird1.wav"
-    save_dir = "./bon_musicldm"
+    style_path = "./musicTI_dataset/audios/timbre/bird/bird1.wav"
+    save_dir = "./bon_musicldm2"
     n_samples = 64  # number of stochastic samples to generate
     strength = 0.7  # 0.4 = stay close to content, 0.9 = heavy restyle
-    guidance_scale = 10.0
+    guidance_scale = 5.0
     n_steps = 100
     lam = 0.5  # weight for combined_score
     ns = [1, 2, 4, 8, 16, 32, 64]

@@ -239,9 +239,9 @@ def plot_heatmaps(
 
 def main():
     # ── Paramètres ────────────────────────────────────────────────────────────
-    folder = "./test_outputs/stylus_grid64"  # dossier généré par generate_candidates()
-    style = "music/chime.wav"
-    content = "music/violin.wav"
+    folder = "./test_outputs/chime1_violin1/grid_search"  # dossier généré par generate_candidates()
+    style = "musicTI_dataset/audios/timbre/chime/chime1.wav"
+    content = "musicTI_dataset/audios/content/violin/violin1.wav"
     lam = 0.5  # λ pour combined_score
     sr = 22050
     duration = 5.0

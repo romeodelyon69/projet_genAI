@@ -34,17 +34,23 @@ def save_audio(path: str, audio: np.ndarray, sr: int):
 
 def main():
     # ── Fichiers audio ────────────────────────────────────────────────────────
-    style = "musicTI_dataset/audios/timbre/chime/chime1.wav"
-    content = "musicTI_dataset/audios/content/violin/violin1.wav"
-    save_dir = "./test_outputs/stylus_grid64"
+    style = "musicTI_dataset/audios/timbre/harmonica/harmonica2.wav"
+    content = "musicTI_dataset/audios/content/hiphop/hiphop1.wav"
+
+    dir = style.split("/")[-1].split(".")[0] + "_" + content.split("/")[-1].split(".")[0]
+    save_dir = "./test_outputs/" + dir + "/" + "grid_search"
     duration = 5.0
+    
+    # Ajustement proportionnel de la taille de l'image (512px pour 5s)
+    target_length = int((duration / 5.0) * 512)
+    target_length = (target_length // 64) * 64  # Doit être un multiple de 64
 
     # ── Scores ────────────────────────────────────────────────────────────────
     lam = 0.5  # λ pour combined_score
 
     # ── Grille 8×8 = 64 candidats ─────────────────────────────────────────────
-    alphas = list(np.linspace(0.25, 1.0, 8).round(3))  # style guidance
-    gammas = list(np.linspace(0.02, 0.30, 8).round(3))  # query preservation
+    alphas = list(np.linspace(0.25, 1.0, 6).round(3))  # style guidance
+    gammas = list(np.linspace(0.02, 0.40, 6).round(3))  # query preservation
 
     # ── Config modèle ─────────────────────────────────────────────────────────
     steps = 50
@@ -66,6 +72,7 @@ def main():
         model_id=model_id,
         device=device,
         dtype=torch.float32 if fp32 or device == "cpu" else torch.float16,
+        target_length=target_length,
     )
 
     # ── Chargement audio ──────────────────────────────────────────────────────

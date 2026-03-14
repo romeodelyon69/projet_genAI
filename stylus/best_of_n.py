@@ -62,14 +62,14 @@ def generate_candidates(
     gammas: list | None = None,
 ) -> list[dict]:
     """
-    Génère 64 audios stylisés sur une grille 8α × 8γ.
+    Génère des audios stylisés sur une grille α × γ.
     Calcule combined_score et clap_scores pour chaque candidat.
 
     Paramètres
     ----------
     pipeline    : StylusPipeline déjà chargé (load_model() appelé)
-    alphas      : 8 valeurs de style guidance (défaut : linspace(0.25, 1.0, 8))
-    gammas      : 8 valeurs de query preservation (défaut : linspace(0.02, 0.30, 8))
+    alphas      : valeurs de style guidance (défaut : linspace(0.25, 1.0, 8))
+    gammas      : valeurs de query preservation (défaut : linspace(0.02, 0.30, 8))
     lam         : λ pour combined_score
 
     Retourne une liste de 64 dicts :
@@ -81,10 +81,6 @@ def generate_candidates(
     if gammas is None:
         gammas = list(np.linspace(0.02, 0.30, 8).round(3))
 
-    assert len(alphas) * len(gammas) == 64, (
-        f"La grille doit produire exactement 64 candidats "
-        f"(|alphas|={len(alphas)} × |gammas|={len(gammas)} = {len(alphas) * len(gammas)})"
-    )
 
     os.makedirs(save_dir, exist_ok=True)
     sr = pipeline.cfg.sample_rate
