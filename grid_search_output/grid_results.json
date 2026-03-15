@@ -1,0 +1,602 @@
+{
+  "alphas": [
+    0.0,
+    0.1429,
+    0.2857,
+    0.4286,
+    0.5714,
+    0.7143,
+    0.8571,
+    1.0
+  ],
+  "gammas": [
+    0.0,
+    0.1429,
+    0.2857,
+    0.4286,
+    0.5714,
+    0.7143,
+    0.8571,
+    1.0
+  ],
+  "style_path": "musicTI_dataset/audios/timbre/chime/chime1.wav",
+  "content_path": "musicTI_dataset/audios/content/violin/violin1.wav",
+  "results": [
+    {
+      "run_id": "a0.00_g0.00",
+      "alpha": 0.0,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g0.00\\stylized_g0.0_a0.0_uncond.wav",
+      "duration_s": 10.0,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.00_g0.14",
+      "alpha": 0.0,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g0.14\\stylized_g0.1429_a0.0_uncond.wav",
+      "duration_s": 9.8,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.00_g0.29",
+      "alpha": 0.0,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g0.29\\stylized_g0.2857_a0.0_uncond.wav",
+      "duration_s": 9.6,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.00_g0.43",
+      "alpha": 0.0,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g0.43\\stylized_g0.4286_a0.0_uncond.wav",
+      "duration_s": 9.4,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.00_g0.57",
+      "alpha": 0.0,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g0.57\\stylized_g0.5714_a0.0_uncond.wav",
+      "duration_s": 9.7,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.00_g0.71",
+      "alpha": 0.0,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g0.71\\stylized_g0.7143_a0.0_uncond.wav",
+      "duration_s": 9.9,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.00_g0.86",
+      "alpha": 0.0,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g0.86\\stylized_g0.8571_a0.0_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.00_g1.00",
+      "alpha": 0.0,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.00_g1.00\\stylized_g1.0_a0.0_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g0.00",
+      "alpha": 0.1429,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g0.00\\stylized_g0.0_a0.1429_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g0.14",
+      "alpha": 0.1429,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g0.14\\stylized_g0.1429_a0.1429_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g0.29",
+      "alpha": 0.1429,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g0.29\\stylized_g0.2857_a0.1429_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g0.43",
+      "alpha": 0.1429,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g0.43\\stylized_g0.4286_a0.1429_uncond.wav",
+      "duration_s": 9.3,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g0.57",
+      "alpha": 0.1429,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g0.57\\stylized_g0.5714_a0.1429_uncond.wav",
+      "duration_s": 9.6,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g0.71",
+      "alpha": 0.1429,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g0.71\\stylized_g0.7143_a0.1429_uncond.wav",
+      "duration_s": 9.5,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g0.86",
+      "alpha": 0.1429,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g0.86\\stylized_g0.8571_a0.1429_uncond.wav",
+      "duration_s": 9.6,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.14_g1.00",
+      "alpha": 0.1429,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.14_g1.00\\stylized_g1.0_a0.1429_uncond.wav",
+      "duration_s": 9.3,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g0.00",
+      "alpha": 0.2857,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g0.00\\stylized_g0.0_a0.2857_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g0.14",
+      "alpha": 0.2857,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g0.14\\stylized_g0.1429_a0.2857_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g0.29",
+      "alpha": 0.2857,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g0.29\\stylized_g0.2857_a0.2857_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g0.43",
+      "alpha": 0.2857,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g0.43\\stylized_g0.4286_a0.2857_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g0.57",
+      "alpha": 0.2857,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g0.57\\stylized_g0.5714_a0.2857_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g0.71",
+      "alpha": 0.2857,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g0.71\\stylized_g0.7143_a0.2857_uncond.wav",
+      "duration_s": 9.3,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g0.86",
+      "alpha": 0.2857,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g0.86\\stylized_g0.8571_a0.2857_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.29_g1.00",
+      "alpha": 0.2857,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.29_g1.00\\stylized_g1.0_a0.2857_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g0.00",
+      "alpha": 0.4286,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g0.00\\stylized_g0.0_a0.4286_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g0.14",
+      "alpha": 0.4286,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g0.14\\stylized_g0.1429_a0.4286_uncond.wav",
+      "duration_s": 9.8,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g0.29",
+      "alpha": 0.4286,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g0.29\\stylized_g0.2857_a0.4286_uncond.wav",
+      "duration_s": 10.5,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g0.43",
+      "alpha": 0.4286,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g0.43\\stylized_g0.4286_a0.4286_uncond.wav",
+      "duration_s": 10.5,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g0.57",
+      "alpha": 0.4286,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g0.57\\stylized_g0.5714_a0.4286_uncond.wav",
+      "duration_s": 9.8,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g0.71",
+      "alpha": 0.4286,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g0.71\\stylized_g0.7143_a0.4286_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g0.86",
+      "alpha": 0.4286,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g0.86\\stylized_g0.8571_a0.4286_uncond.wav",
+      "duration_s": 9.0,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.43_g1.00",
+      "alpha": 0.4286,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.43_g1.00\\stylized_g1.0_a0.4286_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g0.00",
+      "alpha": 0.5714,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g0.00\\stylized_g0.0_a0.5714_uncond.wav",
+      "duration_s": 10.5,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g0.14",
+      "alpha": 0.5714,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g0.14\\stylized_g0.1429_a0.5714_uncond.wav",
+      "duration_s": 10.0,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g0.29",
+      "alpha": 0.5714,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g0.29\\stylized_g0.2857_a0.5714_uncond.wav",
+      "duration_s": 9.7,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g0.43",
+      "alpha": 0.5714,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g0.43\\stylized_g0.4286_a0.5714_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g0.57",
+      "alpha": 0.5714,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g0.57\\stylized_g0.5714_a0.5714_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g0.71",
+      "alpha": 0.5714,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g0.71\\stylized_g0.7143_a0.5714_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g0.86",
+      "alpha": 0.5714,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g0.86\\stylized_g0.8571_a0.5714_uncond.wav",
+      "duration_s": 9.4,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.57_g1.00",
+      "alpha": 0.5714,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.57_g1.00\\stylized_g1.0_a0.5714_uncond.wav",
+      "duration_s": 9.7,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g0.00",
+      "alpha": 0.7143,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g0.00\\stylized_g0.0_a0.7143_uncond.wav",
+      "duration_s": 9.8,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g0.14",
+      "alpha": 0.7143,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g0.14\\stylized_g0.1429_a0.7143_uncond.wav",
+      "duration_s": 9.6,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g0.29",
+      "alpha": 0.7143,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g0.29\\stylized_g0.2857_a0.7143_uncond.wav",
+      "duration_s": 9.7,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g0.43",
+      "alpha": 0.7143,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g0.43\\stylized_g0.4286_a0.7143_uncond.wav",
+      "duration_s": 9.7,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g0.57",
+      "alpha": 0.7143,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g0.57\\stylized_g0.5714_a0.7143_uncond.wav",
+      "duration_s": 9.0,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g0.71",
+      "alpha": 0.7143,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g0.71\\stylized_g0.7143_a0.7143_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g0.86",
+      "alpha": 0.7143,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g0.86\\stylized_g0.8571_a0.7143_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.71_g1.00",
+      "alpha": 0.7143,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.71_g1.00\\stylized_g1.0_a0.7143_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g0.00",
+      "alpha": 0.8571,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g0.00\\stylized_g0.0_a0.8571_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g0.14",
+      "alpha": 0.8571,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g0.14\\stylized_g0.1429_a0.8571_uncond.wav",
+      "duration_s": 9.0,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g0.29",
+      "alpha": 0.8571,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g0.29\\stylized_g0.2857_a0.8571_uncond.wav",
+      "duration_s": 9.3,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g0.43",
+      "alpha": 0.8571,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g0.43\\stylized_g0.4286_a0.8571_uncond.wav",
+      "duration_s": 9.4,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g0.57",
+      "alpha": 0.8571,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g0.57\\stylized_g0.5714_a0.8571_uncond.wav",
+      "duration_s": 9.7,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g0.71",
+      "alpha": 0.8571,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g0.71\\stylized_g0.7143_a0.8571_uncond.wav",
+      "duration_s": 9.3,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g0.86",
+      "alpha": 0.8571,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g0.86\\stylized_g0.8571_a0.8571_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a0.86_g1.00",
+      "alpha": 0.8571,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a0.86_g1.00\\stylized_g1.0_a0.8571_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g0.00",
+      "alpha": 1.0,
+      "gamma": 0.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g0.00\\stylized_g0.0_a1.0_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g0.14",
+      "alpha": 1.0,
+      "gamma": 0.1429,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g0.14\\stylized_g0.1429_a1.0_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g0.29",
+      "alpha": 1.0,
+      "gamma": 0.2857,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g0.29\\stylized_g0.2857_a1.0_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g0.43",
+      "alpha": 1.0,
+      "gamma": 0.4286,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g0.43\\stylized_g0.4286_a1.0_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g0.57",
+      "alpha": 1.0,
+      "gamma": 0.5714,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g0.57\\stylized_g0.5714_a1.0_uncond.wav",
+      "duration_s": 9.1,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g0.71",
+      "alpha": 1.0,
+      "gamma": 0.7143,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g0.71\\stylized_g0.7143_a1.0_uncond.wav",
+      "duration_s": 9.2,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g0.86",
+      "alpha": 1.0,
+      "gamma": 0.8571,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g0.86\\stylized_g0.8571_a1.0_uncond.wav",
+      "duration_s": 9.0,
+      "status": "ok"
+    },
+    {
+      "run_id": "a1.00_g1.00",
+      "alpha": 1.0,
+      "gamma": 1.0,
+      "use_audio_prompt": false,
+      "output_path": "grid_search_output\\a1.00_g1.00\\stylized_g1.0_a1.0_uncond.wav",
+      "duration_s": 9.6,
+      "status": "ok"
+    }
+  ]
+}
