@@ -1,13 +1,13 @@
 """
 MusicLDM — Style Transfer (audio2audio)
 -----------------------------------------
-Architecture :
+Architecture:
     Audio style → CLAP audio encoder → style_embeds [1, 512]
     Audio source → VAE encode → z0
     z0 + bruit(strength) → UNet(style_embeds) → z_styled
     z_styled → VAE decode → Mel → HiFi-GAN → audio
 
-Dépendances:
+Dependencies:
     pip install diffusers transformers accelerate soundfile librosa torch torchaudio
 """
 
@@ -35,7 +35,7 @@ from diffusers import MusicLDMPipeline, DDIMScheduler
 # ─────────────────────────────────────────────
 MODEL_ID = "ucsd-reach/musicldm"
 SAMPLE_RATE = 16000
-CLAP_SR = 48000  # CLAP entraîné à 48kHz
+CLAP_SR = 48000  # CLAP trained at 48kHz
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 CHUNK_SECONDS = 10
@@ -89,7 +89,7 @@ def merge_chunks(chunks: list[np.ndarray], original_length: int) -> np.ndarray:
 
 
 # ─────────────────────────────────────────────
-# Mel spectrogram (paramètres MusicLDM = AudioLDM)
+# Mel spectrogram (MusicLDM = AudioLDM parameters)
 # ─────────────────────────────────────────────
 _MEL_TF = None
 
@@ -168,14 +168,14 @@ def vae_decode(z: torch.Tensor, vae, pipe) -> np.ndarray:
 
 
 # ─────────────────────────────────────────────
-# Encoding prompt texte — MusicLDM (CLAP seul)
+# Text prompt encoding — MusicLDM (CLAP only)
 # ─────────────────────────────────────────────
 def encode_prompt_text(prompt: str, pipe, guidance: bool) -> tuple:
     """
-    MusicLDM encode_prompt retourne (prompt_embeds, attention_mask).
-    prompt_embeds : [2, 1, 512] avec CFG, [1, 1, 512] sans CFG.
-    On passe ces tenseurs DIRECTEMENT à class_labels sans squeeze
-    (la pipeline officielle le fait ainsi).
+    MusicLDM encode_prompt returns (prompt_embeds, attention_mask).
+    prompt_embeds: [2, 1, 512] with CFG, [1, 1, 512] without CFG.
+    These tensors are passed DIRECTLY to class_labels without squeeze
+    (this is how the official pipeline does it).
     """
     with torch.no_grad():
         result = pipe._encode_prompt(
@@ -184,7 +184,7 @@ def encode_prompt_text(prompt: str, pipe, guidance: bool) -> tuple:
             num_waveforms_per_prompt=1,
             do_classifier_free_guidance=guidance,
         )
-    # _encode_prompt peut retourner un tensor seul ou un tuple
+    # _encode_prompt may return a single tensor or a tuple
     if isinstance(result, torch.Tensor):
         return result, None  # prompt_embeds [2,512], attention_mask=None
     return result  # tuple (prompt_embeds, attention_mask)
@@ -192,15 +192,15 @@ def encode_prompt_text(prompt: str, pipe, guidance: bool) -> tuple:
 
 def encode_audio_as_prompt(wav: np.ndarray, pipe, guidance: bool) -> tuple:
     """
-    Encode un chunk audio via CLAP musical → même espace que encode_prompt_text.
+    Encodes an audio chunk via musical CLAP → same space as encode_prompt_text.
 
-    MusicLDM utilise ClapModel — get_audio_features() retourne directement
-    un embedding [1, 512] dans le même espace que get_text_features().
-    Pas de projection ni de GPT2 : on peut mixer directement.
+    MusicLDM uses ClapModel — get_audio_features() returns directly
+    an embedding [1, 512] in the same space as get_text_features().
+    No projection or GPT2: can be mixed directly.
     """
     dtype = next(pipe.text_encoder.parameters()).dtype
 
-    # Resample 16kHz → 48kHz pour CLAP (librosa si torchaudio indisponible)
+    # Resample 16kHz → 48kHz for CLAP (librosa if torchaudio unavailable)
     if HAS_TORCHAUDIO:
         wav_t = torch.FloatTensor(wav).unsqueeze(0)
         wav_np = (
@@ -223,7 +223,7 @@ def encode_audio_as_prompt(wav: np.ndarray, pipe, guidance: bool) -> tuple:
             **{k: v.to(DEVICE) for k, v in inputs.items()}
         ).to(dtype)  # [1, 512]
 
-        # MusicLDM UNet attend [batch, seq, dim] → unsqueeze seq dim
+        # MusicLDM UNet expects [batch, seq, dim] → unsqueeze seq dim
         audio_embed = audio_embed.unsqueeze(1)  # [1, 1, 512]
 
         # CFG : concat (uncond, cond)
@@ -234,17 +234,17 @@ def encode_audio_as_prompt(wav: np.ndarray, pipe, guidance: bool) -> tuple:
                 num_waveforms_per_prompt=1,
                 do_classifier_free_guidance=False,
             )
-            # _encode_prompt retourne un tensor seul ou un tuple
+            # _encode_prompt returns a single tensor or a tuple
             if isinstance(raw_uncond, torch.Tensor):
                 p_uncond = raw_uncond
             else:
                 p_uncond = raw_uncond[0]
-            # s'assurer que p_uncond est [1, 1, 512] pour le cat
+            # ensure p_uncond is [1, 1, 512] for the cat
             if p_uncond.dim() == 2:
                 p_uncond = p_uncond.unsqueeze(1)
             audio_embed = torch.cat([p_uncond, audio_embed], dim=0)
 
-        # attention_mask = None pour CLAP (pas de padding variable)
+        # attention_mask = None for CLAP (no variable padding)
         attention_mask = None
 
     return audio_embed, attention_mask
@@ -254,14 +254,14 @@ def mix_embeddings(
     embed_prev: torch.Tensor, embed_target: torch.Tensor, alpha: float
 ) -> torch.Tensor:
     """
-    alpha=0 → 100% embed_prev   (son du chunk précédent)
-    alpha=1 → 100% embed_target (prompt texte cible)
+    alpha=0 → 100% embed_prev   (output of previous chunk)
+    alpha=1 → 100% embed_target (target text prompt)
     """
     return (1 - alpha) * embed_prev + alpha * embed_target
 
 
 # ─────────────────────────────────────────────
-# Ajout de bruit (forward diffusion)
+# Noise addition (forward diffusion)
 # ─────────────────────────────────────────────
 def add_noise(
     z0: torch.Tensor, scheduler, strength: float, n_steps: int
@@ -281,14 +281,14 @@ def add_noise(
 
 
 # ─────────────────────────────────────────────
-# Débruitage guidé (MusicLDM — UNet simple)
+# Guided denoising (MusicLDM — simple UNet)
 # ─────────────────────────────────────────────
 def get_class_labels(guidance_scale: float, pipe, do_cfg: bool) -> torch.Tensor:
     """
-    MusicLDM passe guidance_scale comme class_label (pas la durée).
-    class_embedding est une Linear(1, 512) → attend [batch, 1].
+    MusicLDM passes guidance_scale as class_label (not duration).
+    class_embedding is a Linear(1, 512) → expects [batch, 1].
     """
-    # batch_size = 2 si CFG (uncond + cond), 1 sinon
+    # batch_size = 2 if CFG (uncond + cond), 1 otherwise
     batch_size = 2 if do_cfg else 1
     class_labels = torch.full(
         (batch_size, 1), fill_value=guidance_scale, device=DEVICE, dtype=torch.float32
@@ -306,7 +306,7 @@ def guided_denoise(
     attention_mask,
 ) -> torch.Tensor:
     """
-    MusicLDM UNet : un seul cross-attention + class_labels pour la durée.
+    MusicLDM UNet: single cross-attention + class_labels for duration.
     """
     scheduler = pipe.scheduler
     scheduler.set_timesteps(n_steps, device=DEVICE)
@@ -320,7 +320,7 @@ def guided_denoise(
 
         with torch.no_grad():
             p = prompt_embeds.to(dtype)
-            # Normaliser la shape → [batch, 512] attendu par le UNet
+            # Normalize shape → [batch, 512] expected by the UNet
             if p.dim() == 3:
                 p = p.squeeze(1)  # [B, 1, 512] → [B, 512]
             elif p.dim() == 1:
@@ -366,7 +366,7 @@ def main(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # ── 1. Modèle ───────────────────────────────────────────
+    # ── 1. Model ───────────────────────────────────────────
     print("[1/5] Chargement MusicLDM...")
     pipe = MusicLDMPipeline.from_pretrained(
         MODEL_ID,
@@ -376,7 +376,7 @@ def main(
     vae = pipe.vae
     print("      Modèle chargé.")
 
-    # ── 2. Audio source (ajusté à exactement 10s) ──────────
+    # ── 2. Source audio (adjusted to exactly 10s) ──────────
     print(f"\n[2/5] Chargement audio : {input_path}")
     wav_raw = load_audio(input_path)
     if len(wav_raw) < CHUNK_SAMPLES:
@@ -404,10 +404,10 @@ def main(
 
     do_cfg = guidance_scale > 1.0
 
-    # Charger et encoder l'audio de style via CLAP audio encoder
+    # Load and encode the style audio via CLAP audio encoder
     print(f"        Chargement audio style...")
     wav_style_raw = load_audio(style_audio_path)
-    # Boucler si moins de 10s pour avoir un embeddings représentatif
+    # Loop if less than 10s to get a representative embedding
     if len(wav_style_raw) < CHUNK_SAMPLES:
         repeats = int(np.ceil(CHUNK_SAMPLES / len(wav_style_raw)))
         wav_style = np.tile(wav_style_raw, repeats)[:CHUNK_SAMPLES]
@@ -445,12 +445,12 @@ def main(
 
 
 if __name__ == "__main__":
-    input_path = "./music4.wav"  # audio à styliser
+    input_path = "./music4.wav"  # audio to stylize
     style_audio_path = (
-        "./musicTI_dataset/timbre/bird/bird1.wav"  # audio référence de style
+        "./musicTI_dataset/timbre/bird/bird1.wav"  # style reference audio
     )
     output_dir = "./encode_decode"
-    strength = 0.4  # 0.6-0.8 recommandé ; 1.0 = génération pure
-    guidance = 10.0  # 10-15 pour forte adhérence au style
+    strength = 0.4  # 0.6-0.8 recommended; 1.0 = pure generation
+    guidance = 10.0  # 10-15 for strong style adherence
     steps = 100
     main(input_path, style_audio_path, output_dir, strength, guidance, steps)

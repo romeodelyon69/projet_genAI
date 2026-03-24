@@ -1,8 +1,8 @@
 """
-Scores spectraux pour évaluation du transfert de style audio.
+Spectral scores for audio style transfer evaluation.
 
-  - mel_style_score   : transfert de style (cosine sur Mel)
-  - mfcc_content_score: préservation du contenu (cosine sur MFCC)
+  - mel_style_score   : style transfer (cosine on Mel)
+  - mfcc_content_score: content preservation (cosine on MFCC)
   - combined_score    : λ·style + (1-λ)·content
 """
 
@@ -15,7 +15,7 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def mel_style_score(output: np.ndarray, style_ref: np.ndarray, sr: int) -> float:
-    """Cosine similarity entre les spectres MEL moyens (transfert de style)."""
+    """Cosine similarity between mean MEL spectra (style transfer)."""
 
     def embed(audio):
         mel = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=128)
@@ -25,7 +25,7 @@ def mel_style_score(output: np.ndarray, style_ref: np.ndarray, sr: int) -> float
 
 
 def mfcc_content_score(output: np.ndarray, content_ref: np.ndarray, sr: int) -> float:
-    """Cosine similarity des MFCC moyens (préservation du contenu)."""
+    """Cosine similarity of mean MFCCs (content preservation)."""
 
     def embed(audio):
         return librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=20).mean(axis=1)

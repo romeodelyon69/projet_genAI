@@ -1,15 +1,15 @@
 """
 Stylus: Repurposing Stable Diffusion for Training-Free Music Style Transfer
-Implémentation fidèle du papier arxiv:2411.15913
+Faithful implementation of paper arxiv:2411.15913
 
-Pipeline exact du papier :
-  1. DDIM inversion style   → capture K_style[t],   V_style[t]   à chaque t
-  2. DDIM inversion content → capture Q_content[t]              à chaque t
+Exact pipeline from the paper:
+  1. DDIM inversion style   → capture K_style[t],   V_style[t]   at each t
+  2. DDIM inversion content → capture Q_content[t]              at each t
   3. AdaIN(z_T_content, z_T_style) → z_T_init
-  4. DDIM reverse depuis z_T_init :
+  4. DDIM reverse from z_T_init:
        Q_bar = γ*Q_content[t] + (1-γ)*Q_current[t]          ← query preservation
        out   = out_content + α*(out_style - out_content)      ← style guidance scale
-  5. Phase-preserving reconstruction : phase STFT content + magnitude stylisée
+  5. Phase-preserving reconstruction: content STFT phase + stylized magnitude
 """
 
 import os
@@ -27,16 +27,16 @@ from dataclasses import dataclass, field
 
 @dataclass
 class StylusConfig:
-    # γ : query preservation — contrôle comment la query "regarde"
-    #     0 = Q du reverse courant (libre), 1 = Q du content inversé (structure pure)
+    # γ: query preservation — controls how the query "looks"
+    #    0 = Q from current reverse (free), 1 = Q from inverted content (pure structure)
     gamma: float = 0.8
 
-    # α : style guidance scale — contrôle combien la sortie attention penche vers le style
-    #     interpolation CFG sur la sortie : out = out_content + α*(out_style - out_content)
-    #     0 = content pur, 1 = style pur
+    # α: style guidance scale — controls how much the attention output leans toward style
+    #    CFG interpolation on output: out = out_content + α*(out_style - out_content)
+    #    0 = pure content, 1 = pure style
     alpha: float = 0.5
 
-    # Couches U-Net SD1.5 ciblées — layers 7-12 du papier = up_blocks[1,2,3]
+    # Targeted SD1.5 U-Net layers — paper layers 7-12 = up_blocks[1,2,3]
     # up_blocks[1] = 8×8, up_blocks[2] = 16×16, up_blocks[3] = 32×32
     target_up_block_indices: list = field(default_factory=lambda: [1, 2, 3])
 
@@ -59,17 +59,17 @@ class StylusConfig:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AttentionStore — stocke Q_content, K_style, V_style par timestep
+# AttentionStore — stores Q_content, K_style, V_style per timestep
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class AttentionStore:
     """
-    Modes :
-      capture_style   → stocke K[t], V[t] du style
-      capture_content → stocke Q[t] du content
-      inject          → query preservation + injection K/V style
-      off             → forward normal
+    Modes:
+      capture_style   → stores K[t], V[t] from style
+      capture_content → stores Q[t] from content
+      inject          → query preservation + K/V style injection
+      off             → normal forward
     """
 
     def __init__(self):
@@ -117,15 +117,15 @@ class AttentionStore:
 
 class StylusAttnProcessor:
     """
-    Implémente l'équation exacte du papier :
+    Implements the exact equation from the paper:
 
-      Capture style   : stocke K_style[t], V_style[t]
-      Capture content : stocke Q_content[t]
+      Capture style   : stores K_style[t], V_style[t]
+      Capture content : stores Q_content[t]
       Inject          :
         Q_bar = γ * Q_content[t] + (1-γ) * Q_current[t]
         out   = Attn(Q_bar, K_style[t], V_style[t])
 
-    Seule la self-attention est modifiée (encoder_hidden_states is None).
+    Only self-attention is modified (encoder_hidden_states is None).
     """
 
     def __init__(self, store: AttentionStore, layer_name: str):
@@ -162,10 +162,10 @@ class StylusAttnProcessor:
                 qc = store.get_content_q(self.layer_name)
 
                 if ks is not None and qc is not None:
-                    # Query preservation : Q_bar = γ*Q_content + (1-γ)*Q_current
+                    # Query preservation: Q_bar = γ*Q_content + (1-γ)*Q_current
                     q_bar = store.gamma * qc + (1 - store.gamma) * q
 
-                    # Style guidance scale α (CFG-inspired sur les sorties) :
+                    # Style guidance scale α (CFG-inspired on outputs):
                     #   out_content = Attn(Q_bar, K_content, V_content)  ← structure
                     #   out_style   = Attn(Q_bar, K_style,  V_style)     ← texture
                     #   out = out_content + α * (out_style - out_content)
@@ -193,17 +193,17 @@ class StylusAttnProcessor:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AdaIN sur les latents
+# AdaIN on latents
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def adain_latent(z_content: torch.Tensor, z_style: torch.Tensor) -> torch.Tensor:
     """
     AdaIN(z_content, z_style) = σ(z_style) * (z_content - μ(z_content)) / σ(z_content) + μ(z_style)
-    Calcul par canal sur les dimensions spatiales (H, W) du latent.
+    Computed per channel over the spatial dimensions (H, W) of the latent.
     """
     eps = 1e-5
-    # Moments sur H×W
+    # Moments over H×W
     mu_c = z_content.mean(dim=[2, 3], keepdim=True)
     sig_c = z_content.std(dim=[2, 3], keepdim=True) + eps
     mu_s = z_style.mean(dim=[2, 3], keepdim=True)
@@ -261,7 +261,7 @@ class AudioProcessor:
         return t * 2.0 - 1.0
 
     def image_to_mel_norm(self, image: torch.Tensor) -> np.ndarray:
-        """Image → mel normalisé [0,1], moyenne des 3 canaux."""
+        """Image → normalized mel [0,1], average of 3 channels."""
         img = image[0].float().cpu().numpy().mean(axis=0)
         return ((img + 1.0) / 2.0).clip(0.0, 1.0)
 
@@ -331,74 +331,94 @@ class AudioProcessor:
     ) -> np.ndarray:
         """
         Reconstruction directe depuis le mel stylisé.
- 
+
         Ancienne approche (spectral envelope transfer) :
           mag_stylized = mag_content * ratio  ← ancré sur le content
           → le style ne peut jamais dominer, même avec alpha=1 / gamma=0
- 
+
         Approche correcte :
           1. Mel stylisé → magnitude STFT directement (transposée pondérée)
           2. Phase du content comme initialisation GL (ancre le timing)
           3. 8 itérations GL pour la cohérence STFT
- 
+
         La magnitude vient entièrement du mel stylisé.
         La phase du content ancre le rythme sans imposer sa magnitude.
         """
         cfg = self.cfg
         librosa = self.librosa
- 
+
         T_stft = content_stft.shape[1]
- 
+
         # 1. Mel dB → amplitude mel
         mel_amp = librosa.db_to_amplitude(mel_db_stylized)
- 
+
         # Aligner temporellement
         T_mel = mel_amp.shape[1]
         if T_mel != T_stft:
             import torch as _t, torch.nn.functional as _F
+
             tt = _t.from_numpy(mel_amp).float().unsqueeze(0).unsqueeze(0)
-            tt = _F.interpolate(tt, size=(cfg.n_mels, T_stft),
-                                mode="bilinear", align_corners=False)
+            tt = _F.interpolate(
+                tt, size=(cfg.n_mels, T_stft), mode="bilinear", align_corners=False
+            )
             mel_amp = tt.squeeze().numpy()
- 
+
         # 2. Amplitude mel → magnitude STFT via transposée pondérée
         mel_fb = librosa.filters.mel(
-            sr=cfg.sample_rate, n_fft=cfg.n_fft,
-            n_mels=cfg.n_mels, fmin=cfg.fmin, fmax=cfg.fmax,
+            sr=cfg.sample_rate,
+            n_fft=cfg.n_fft,
+            n_mels=cfg.n_mels,
+            fmin=cfg.fmin,
+            fmax=cfg.fmax,
         )
         mel_fb_norm = mel_fb / (mel_fb.sum(axis=0, keepdims=True) + 1e-10)
         mag_stft = np.maximum(mel_fb_norm.T @ mel_amp, 0.0)
- 
+
         # Supprimer artefacts HF au-delà de fmax
         freqs = np.linspace(0, cfg.sample_rate / 2, mag_stft.shape[0])
         rolloff = cfg.fmax if cfg.fmax > 0 else cfg.sample_rate / 2
-        mask = np.where(freqs <= rolloff, 1.0,
-                        np.maximum(0.0, 1.0 - (freqs - rolloff) / 500.0))
+        mask = np.where(
+            freqs <= rolloff, 1.0, np.maximum(0.0, 1.0 - (freqs - rolloff) / 500.0)
+        )
         mag_stft = mag_stft * mask[:, np.newaxis]
- 
+
         # 3. Griffin-Lim initialisé avec la phase du content
         phase_init = np.angle(content_stft)
         stft_cur = mag_stft * np.exp(1j * phase_init)
- 
+
         target_len = librosa.istft(
-            content_stft, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
-            window='hann', center=True,
+            content_stft,
+            n_fft=cfg.n_fft,
+            hop_length=cfg.hop_length,
+            window="hann",
+            center=True,
         ).shape[0]
- 
+
         for _ in range(8):
             audio_tmp = librosa.istft(
-                stft_cur, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
-                window='hann', center=True, length=target_len,
+                stft_cur,
+                n_fft=cfg.n_fft,
+                hop_length=cfg.hop_length,
+                window="hann",
+                center=True,
+                length=target_len,
             )
             stft_cur = librosa.stft(
-                audio_tmp, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
-                window='hann', center=True,
+                audio_tmp,
+                n_fft=cfg.n_fft,
+                hop_length=cfg.hop_length,
+                window="hann",
+                center=True,
             )
             stft_cur = mag_stft * np.exp(1j * np.angle(stft_cur))
- 
+
         audio = librosa.istft(
-            stft_cur, n_fft=cfg.n_fft, hop_length=cfg.hop_length,
-            window='hann', center=True, length=target_len,
+            stft_cur,
+            n_fft=cfg.n_fft,
+            hop_length=cfg.hop_length,
+            window="hann",
+            center=True,
+            length=target_len,
         )
         return audio.astype(np.float32)
 
@@ -418,8 +438,8 @@ class AudioProcessor:
             cmap="magma",
             extent=[0, dur, cfg.fmin, cfg.fmax],
         )
-        ax.set_xlabel("Temps (s)")
-        ax.set_ylabel("Fréquence (Hz)")
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Frequency (Hz)")
         fig.colorbar(im, ax=ax, format="%+2.0f dB").set_label("dB")
         if title:
             ax.set_title(title, fontweight="bold")
@@ -452,8 +472,8 @@ class AudioProcessor:
                 vmax=vmax,
             )
             ax.set_title(title, fontweight="bold")
-            ax.set_xlabel("Temps (s)")
-            ax.set_ylabel("Fréquence (Hz)")
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("Frequency (Hz)")
         fig.colorbar(im, ax=axes, format="%+2.0f dB", shrink=0.8, label="dB")
         plt.tight_layout()
         plt.savefig(path, dpi=150, bbox_inches="tight")
@@ -529,11 +549,11 @@ class StylusPipeline:
     @torch.no_grad()
     def _ddim_inversion(self, z0, emb, label=""):
         """
-        Inversion DDIM t=0→T.
-        Capture K_style,V_style (mode capture_style)
-             ou Q_content       (mode capture_content)
-        à chaque timestep.
-        Retourne zT.
+        DDIM inversion t=0→T.
+        Captures K_style,V_style (mode capture_style)
+             or  Q_content       (mode capture_content)
+        at each timestep.
+        Returns zT.
         """
         sched = self._pipe.scheduler
         sched.set_timesteps(self.cfg.num_inference_steps)
@@ -556,8 +576,8 @@ class StylusPipeline:
     @torch.no_grad()
     def _ddim_reverse(self, zT, emb, label=""):
         """
-        Reverse DDIM t=T→0 en mode inject.
-        Utilise Q_content[t] + K_style[t] + V_style[t] à chaque step.
+        DDIM reverse t=T→0 in inject mode.
+        Uses Q_content[t] + K_style[t] + V_style[t] at each step.
         """
         sched = self._pipe.scheduler
         sched.set_timesteps(self.cfg.num_inference_steps)
@@ -614,16 +634,16 @@ class StylusPipeline:
         self.store.mode = "capture_content"
         zT_c = self._ddim_inversion(z0_c, emb, label="content")
 
-        # ── 5. AdaIN(zT_content, zT_style) → initialisation du latent ─────────
+        # ── 5. AdaIN(zT_content, zT_style) → latent initialization ────────────
         print("[5/5] AdaIN + DDIM reverse (inject)...")
         zT_init = adain_latent(zT_c, zT_s)
 
-        # ── 6. DDIM reverse avec query preservation + injection K/V ───────────
+        # ── 6. DDIM reverse with query preservation + K/V injection ─────────
         self.store.mode = "inject"
         z0_out = self._ddim_reverse(zT_init, emb, label="stylized")
         self.store.mode = "off"
 
-        # ── Décodage VAE → mel ────────────────────────────────────────────────
+        # ── VAE decode → mel ────────────────────────────────────────────────
         print("\nDecoding (VAE)...")
         img_out = self._decode(z0_out)
         mel_norm = self.proc.image_to_mel_norm(img_out)

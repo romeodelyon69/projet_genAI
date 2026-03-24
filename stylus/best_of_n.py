@@ -1,14 +1,14 @@
 """
-Analyse test-time scaling : Best-of-N sur transfert de style audio.
+Test-time scaling analysis: Best-of-N on audio style transfer.
 
-Workflow :
-  1. generate_candidates()   — génère 64 audios (grille 8α × 8γ) et calcule tous les scores
-  2. bon_scaling_analysis()  — pour N ∈ [1,2,4,8,16,32], estime E[best-of-N] par Monte Carlo
-  3. plot_bon_curve()        — trace et sauvegarde la courbe
+Workflow:
+  1. generate_candidates()   — generates 64 audios (grid 8α × 8γ) and computes all scores
+  2. bon_scaling_analysis()  — for N ∈ [1,2,4,8,16,32], estimates E[best-of-N] by Monte Carlo
+  3. plot_bon_curve()        — plots and saves the curve
 
-Score sélectionnable via score_key :
+Selectable score via score_key:
   "combined"         → λ·Mel_style + (1-λ)·MFCC_content  (score_combined.py)
-  "clap_directional" → cos(e_out - e_content, e_style - e_content)  ← métrique principale
+  "clap_directional" → cos(e_out - e_content, e_style - e_content)  ← main metric
   "clap_style"       → cos(e_out, e_style)
   "clap_content"     → cos(e_out, e_content)
 """
@@ -33,7 +33,7 @@ def save_audio(path: str, audio: np.ndarray, sr: int):
 
 
 def _extract_score(result: dict, score_key: str) -> float | None:
-    """Extrait le score scalaire d'un résultat selon la clé choisie."""
+    """Extracts the scalar score from a result given a score key."""
     if score_key == "combined":
         return result["combined"]
     elif score_key.startswith("clap_"):
@@ -48,7 +48,7 @@ def _extract_score(result: dict, score_key: str) -> float | None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. Génération des 64 candidats
+# 1. Generating 64 candidates
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -62,25 +62,24 @@ def generate_candidates(
     gammas: list | None = None,
 ) -> list[dict]:
     """
-    Génère des audios stylisés sur une grille α × γ.
-    Calcule combined_score et clap_scores pour chaque candidat.
+    Generates stylized audios over an α × γ grid.
+    Computes combined_score and clap_scores for each candidate.
 
-    Paramètres
+    Parameters
     ----------
-    pipeline    : StylusPipeline déjà chargé (load_model() appelé)
-    alphas      : valeurs de style guidance (défaut : linspace(0.25, 1.0, 8))
-    gammas      : valeurs de query preservation (défaut : linspace(0.02, 0.30, 8))
-    lam         : λ pour combined_score
+    pipeline    : already loaded StylusPipeline (load_model() called)
+    alphas      : style guidance values (default: linspace(0.25, 1.0, 8))
+    gammas      : query preservation values (default: linspace(0.02, 0.30, 8))
+    lam         : λ for combined_score
 
-    Retourne une liste de 64 dicts :
+    Returns a list of 64 dicts:
       { alpha, gamma, wav_path, combined, clap }
-      (l'audio n'est PAS gardé en mémoire pour économiser la RAM)
+      (audio is NOT kept in memory to save RAM)
     """
     if alphas is None:
         alphas = list(np.linspace(0.25, 1.0, 8).round(3))
     if gammas is None:
         gammas = list(np.linspace(0.02, 0.30, 8).round(3))
-
 
     os.makedirs(save_dir, exist_ok=True)
     sr = pipeline.cfg.sample_rate
@@ -138,7 +137,7 @@ def generate_candidates(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Analyse Best-of-N (Monte Carlo)
+# 2. Best-of-N analysis (Monte Carlo)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -150,19 +149,19 @@ def bon_scaling_analysis(
     rng_seed: int = 0,
 ) -> dict:
     """
-    Pour chaque N ∈ ns, estime E[best-of-N] par Monte Carlo :
-      - Répète n_trials fois : tire N candidats au hasard, prend le max de leurs scores.
-      - Moyenne et écart-type sur les tirages.
+    For each N ∈ ns, estimates E[best-of-N] by Monte Carlo:
+      - Repeats n_trials times: draws N random candidates, takes the max of their scores.
+      - Mean and standard deviation over trials.
 
-    Paramètres
+    Parameters
     ----------
-    candidates  : liste retournée par generate_candidates()
+    candidates  : list returned by generate_candidates()
     score_key   : 'combined' | 'clap_directional' | 'clap_style' | 'clap_content'
-    ns          : valeurs de N à analyser (défaut : [1,2,4,8,16,32])
-    n_trials    : nombre de tirages Monte Carlo par valeur de N
-    rng_seed    : graine aléatoire pour reproductibilité
+    ns          : N values to analyse (default: [1,2,4,8,16,32])
+    n_trials    : number of Monte Carlo draws per N value
+    rng_seed    : random seed for reproducibility
 
-    Retourne un dict :
+    Returns a dict:
       {
         N: {"mean": float, "std": float, "trials": list[float]}
         for N in ns
@@ -226,14 +225,14 @@ def plot_bon_curve(
     save_path: str = "bon_curve.png",
 ):
     """
-    Trace E[best-of-N] ± std en fonction de N (échelle log-2 en abscisse).
-    Sauvegarde la figure et l'affiche si un display est disponible.
+    Plots E[best-of-N] ± std as a function of N (log-2 scale on x-axis).
+    Saves the figure and displays it if a display is available.
 
-    Paramètres
+    Parameters
     ----------
-    analysis   : dict retourné par bon_scaling_analysis()
-    score_key  : utilisé pour le titre et le label de l'axe Y
-    save_path  : chemin de sauvegarde de la figure
+    analysis   : dict returned by bon_scaling_analysis()
+    score_key  : used for the title and Y-axis label
+    save_path  : figure save path
     """
     import matplotlib.pyplot as plt
 
@@ -256,15 +255,15 @@ def plot_bon_curve(
     ax.set_xscale("log", base=2)
     ax.set_xticks(ns)
     ax.set_xticklabels([str(n) for n in ns])
-    ax.set_xlabel("N  (nombre de candidats par groupe)", fontsize=12)
-    ax.set_ylabel(f"Score moyen du best-of-N\n({score_key})", fontsize=12)
-    ax.set_title(f"Test-Time Scaling — Best-of-N\n(score : {score_key})", fontsize=13)
+    ax.set_xlabel("N  (number of candidates per group)", fontsize=12)
+    ax.set_ylabel(f"Mean best-of-N score\n({score_key})", fontsize=12)
+    ax.set_title(f"Test-Time Scaling — Best-of-N\n(score: {score_key})", fontsize=13)
     ax.legend(fontsize=11)
     ax.grid(True, which="both", linestyle="--", alpha=0.5)
 
     fig.tight_layout()
     fig.savefig(save_path, dpi=150)
-    print(f"Figure sauvegardée : {save_path}")
+    print(f"Figure saved: {save_path}")
 
     try:
         plt.show()

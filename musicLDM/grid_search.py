@@ -1,8 +1,8 @@
 """
-Grid Search Stylus-AudioLDM2 — 8×8 (alpha × gamma) = 64 générations
-=====================================================================
-Lance le style transfer pour toutes les combinaisons et produit
-un CSV récapitulatif pour analyse CLAP score en aval.
+Grid Search Stylus-AudioLDM2 — 8×8 (alpha × gamma) = 64 generations
+===================================================================
+Runs the style transfer for all combinations and produces
+a summary CSV for downstream CLAP score analysis.
 """
 
 import os
@@ -17,12 +17,12 @@ from stylus_audioldm2_v4 import StylusAudioLDM2Config, StylusAudioLDM2Pipeline
 
 
 def main():
-    # ── Paramètres de la grille ──────────────────────────────────────────
+    # ── Grid parameters ──────────────────────────────────────────
     N = 8
     alphas = np.linspace(0.0, 1.0, N).round(4)
     gammas = np.linspace(0.0, 1.0, N).round(4)
 
-    style_path   = "musicTI_dataset/audios/timbre/chime/chime1.wav"
+    style_path = "musicTI_dataset/audios/timbre/chime/chime1.wav"
     content_path = "musicTI_dataset/audios/content/violin/violin1.wav"
     base_out_dir = "grid_search_output"
     os.makedirs(base_out_dir, exist_ok=True)
@@ -37,11 +37,11 @@ def main():
     print(f"  Output : {base_out_dir}/")
     print("=" * 60)
 
-    # ── Charger le modèle UNE SEULE FOIS ─────────────────────────────────
+    # ── Load the model ONCE ─────────────────────────────────
     cfg_base = StylusAudioLDM2Config(
         style_audio_path=style_path,
         content_audio_path=content_path,
-        skip_roundtrip_check=True,   # on skip les checks pour les 64 runs
+        skip_roundtrip_check=True,  # skip checks for the 64 runs
         num_inference_steps=50,
     )
 
@@ -53,29 +53,29 @@ def main():
     with open(csv_path, "w") as f:
         f.write("run_id,alpha,gamma,use_audio_prompt,output_path,duration_s,status\n")
 
-    # Copier les inputs dans le dossier racine pour référence
+    # Copy inputs to the root folder for reference
     pipeline.proc.save_audio(
         pipeline.proc.load_audio(style_path),
-        os.path.join(base_out_dir, "input_style.wav")
+        os.path.join(base_out_dir, "input_style.wav"),
     )
     pipeline.proc.save_audio(
         pipeline.proc.load_audio(content_path),
-        os.path.join(base_out_dir, "input_content.wav")
+        os.path.join(base_out_dir, "input_content.wav"),
     )
 
-    # ── Boucle principale ────────────────────────────────────────────────
+    # ── Main loop ────────────────────────────────────────────────
     results = []
     for idx, (alpha, gamma) in enumerate(itertools.product(alphas, gammas)):
         alpha = float(alpha)
         gamma = float(gamma)
-        run_id  = f"a{alpha:.2f}_g{gamma:.2f}"
+        run_id = f"a{alpha:.2f}_g{gamma:.2f}"
         run_dir = os.path.join(base_out_dir, run_id)
 
-        print(f"\n{'━'*60}")
-        print(f"  [{idx+1}/{total}]  α={alpha:.4f}  γ={gamma:.4f}")
-        print(f"{'━'*60}")
+        print(f"\n{'━' * 60}")
+        print(f"  [{idx + 1}/{total}]  α={alpha:.4f}  γ={gamma:.4f}")
+        print(f"{'━' * 60}")
 
-        # Mettre à jour les params sans recharger le modèle
+        # Update params without reloading the model
         pipeline.cfg.alpha = alpha
         pipeline.cfg.gamma = gamma
         pipeline.store.alpha = alpha
@@ -93,9 +93,7 @@ def main():
                 output_dir=run_dir,
             )
             suffix = "audioprompt" if pipeline.cfg.use_audio_prompt else "uncond"
-            out_path = os.path.join(
-                run_dir, f"stylized_g{gamma}_a{alpha}_{suffix}.wav"
-            )
+            out_path = os.path.join(run_dir, f"stylized_g{gamma}_a{alpha}_{suffix}.wav")
         except Exception as e:
             status = f"error: {e}"
             print(f"  ⚠ ERREUR: {e}")
@@ -114,35 +112,41 @@ def main():
         results.append(row)
 
         with open(csv_path, "a") as f:
-            f.write(f"{row['run_id']},{row['alpha']},{row['gamma']},"
-                    f"{row['use_audio_prompt']},{row['output_path']},"
-                    f"{row['duration_s']},{row['status']}\n")
+            f.write(
+                f"{row['run_id']},{row['alpha']},{row['gamma']},"
+                f"{row['use_audio_prompt']},{row['output_path']},"
+                f"{row['duration_s']},{row['status']}\n"
+            )
 
         print(f"  Durée: {elapsed:.1f}s  Status: {status}")
 
-    # ── Récapitulatif ────────────────────────────────────────────────────
-    ok_count  = sum(1 for r in results if r["status"] == "ok")
+    # ── Summary ────────────────────────────────────────────────────
+    ok_count = sum(1 for r in results if r["status"] == "ok")
     err_count = total - ok_count
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  GRID SEARCH TERMINÉ")
     print(f"  Réussies : {ok_count}/{total}")
     if err_count:
         print(f"  Erreurs  : {err_count}/{total}")
     print(f"  CSV      : {csv_path}")
     print(f"  Dossier  : {base_out_dir}/")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
-    # ── Sauvegarder aussi en JSON pour faciliter l'analyse ───────────────
+    # ── Also save as JSON to ease analysis ───────────────
     json_path = os.path.join(base_out_dir, "grid_results.json")
     with open(json_path, "w") as f:
-        json.dump({
-            "alphas": alphas.tolist(),
-            "gammas": gammas.tolist(),
-            "style_path": style_path,
-            "content_path": content_path,
-            "results": results,
-        }, f, indent=2)
+        json.dump(
+            {
+                "alphas": alphas.tolist(),
+                "gammas": gammas.tolist(),
+                "style_path": style_path,
+                "content_path": content_path,
+                "results": results,
+            },
+            f,
+            indent=2,
+        )
     print(f"  JSON     : {json_path}")
 
 

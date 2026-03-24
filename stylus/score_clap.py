@@ -1,27 +1,27 @@
 """
-Scores CLAP pour évaluation du transfert de style audio.
+CLAP scores for audio style transfer evaluation.
 
-Supporte laion_clap et msclap (fallback gracieux si non installé).
-Le modèle est chargé une seule fois (singleton).
+Supports laion_clap and msclap (graceful fallback if not installed).
+The model is loaded once (singleton).
 
-Trois métriques complémentaires :
+Three complementary metrics:
 
   clap_style_score(output, style, sr)
       cos(e_out, e_style)
-      → "Le résultat ressemble-t-il au style ?"
-      Insuffisant seul : un output identique au style aurait un score parfait.
+      → "Does the result resemble the style?"
+      Insufficient alone: an output identical to style would have a perfect score.
 
   clap_content_score(output, content, sr)
       cos(e_out, e_content)
-      → "Le contenu est-il préservé ?"
+      → "Is the content preserved?"
 
   clap_directional_score(output, style, content, sr)
       cos(e_out - e_content, e_style - e_content)
-      → "L'output s'est-il déplacé dans la bonne direction, du contenu vers le style ?"
-      C'est la métrique centrale pour évaluer le transfert (analogue au DirectionalCLIP).
+      → "Did the output move in the right direction, from content toward style?"
+      This is the central metric for evaluating transfer quality (analogous to DirectionalCLIP).
 
   clap_scores(output, style, content, sr)
-      → dict regroupant les trois scores, point d'entrée recommandé.
+      → dict grouping the three scores, recommended entry point.
 """
 
 import os
@@ -70,7 +70,7 @@ def _write_tmp(audio: np.ndarray, sr: int) -> str:
 
 
 def _get_embed_fn(model):
-    """Retourne une fonction embed(audio, sr) -> np.ndarray selon le backend CLAP."""
+    """Returns an embed(audio, sr) -> np.ndarray function for the given CLAP backend."""
     try:
         import laion_clap  # noqa: F401
 
@@ -106,14 +106,14 @@ def clap_scores(
     sr: int,
 ) -> dict | None:
     """
-    Calcule les trois scores CLAP en un seul appel (3 embeddings au total).
-    Retourne None si CLAP n'est pas disponible.
+    Computes the three CLAP scores in a single call (3 embeddings total).
+    Returns None if CLAP is not available.
 
-    Clés du dict retourné :
-      'style'       : cos(e_out, e_style)            — ressemblance au style
-      'content'     : cos(e_out, e_content)          — préservation du contenu
+    Keys of the returned dict:
+      'style'       : cos(e_out, e_style)            — style resemblance
+      'content'     : cos(e_out, e_content)          — content preservation
       'directional' : cos(e_out - e_content, e_style - e_content)
-                      — direction du transfert (métrique principale)
+                      — transfer direction (main metric)
     """
     model = _load_clap()
     if model is None:
@@ -141,7 +141,7 @@ def clap_scores(
 def clap_style_score(
     output: np.ndarray, style_ref: np.ndarray, content_ref: np.ndarray, sr: int
 ) -> float | None:
-    """cos(e_out, e_style). Voir clap_scores() pour la métrique complète."""
+    """cos(e_out, e_style). See clap_scores() for the full metric."""
     scores = clap_scores(output, style_ref, content_ref, sr)
     return scores["style"] if scores else None
 
@@ -149,7 +149,7 @@ def clap_style_score(
 def clap_content_score(
     output: np.ndarray, style_ref: np.ndarray, content_ref: np.ndarray, sr: int
 ) -> float | None:
-    """cos(e_out, e_content). Voir clap_scores() pour la métrique complète."""
+    """cos(e_out, e_content). See clap_scores() for the full metric."""
     scores = clap_scores(output, style_ref, content_ref, sr)
     return scores["content"] if scores else None
 
@@ -159,8 +159,8 @@ def clap_directional_score(
 ) -> float | None:
     """
     cos(e_out - e_content, e_style - e_content).
-    Mesure si l'output s'est déplacé dans la direction contenu→style.
-    C'est la métrique principale pour évaluer la qualité du transfert.
+    Measures whether the output moved in the content→style direction.
+    This is the main metric for evaluating transfer quality.
     """
     scores = clap_scores(output, style_ref, content_ref, sr)
     return scores["directional"] if scores else None

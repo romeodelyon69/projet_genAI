@@ -33,26 +33,28 @@ def save_audio(path: str, audio: np.ndarray, sr: int):
 
 
 def main():
-    # ── Fichiers audio ────────────────────────────────────────────────────────
+    # ── Audio files ────────────────────────────────────────────────────────
     style = "musicTI_dataset/audios/timbre/harmonica/harmonica2.wav"
     content = "musicTI_dataset/audios/content/hiphop/hiphop1.wav"
 
-    dir = style.split("/")[-1].split(".")[0] + "_" + content.split("/")[-1].split(".")[0]
+    dir = (
+        style.split("/")[-1].split(".")[0] + "_" + content.split("/")[-1].split(".")[0]
+    )
     save_dir = "./test_outputs/" + dir + "/" + "grid_search"
     duration = 5.0
-    
-    # Ajustement proportionnel de la taille de l'image (512px pour 5s)
+
+    # Proportional adjustment of image size (512px for 5s)
     target_length = int((duration / 5.0) * 512)
-    target_length = (target_length // 64) * 64  # Doit être un multiple de 64
+    target_length = (target_length // 64) * 64  # Must be a multiple of 64
 
     # ── Scores ────────────────────────────────────────────────────────────────
-    lam = 0.5  # λ pour combined_score
+    lam = 0.5  # λ for combined_score
 
-    # ── Grille 8×8 = 64 candidats ─────────────────────────────────────────────
+    # ── 8×8 grid = 64 candidates ─────────────────────────────────────────────
     alphas = list(np.linspace(0.25, 1.0, 6).round(3))  # style guidance
     gammas = list(np.linspace(0.02, 0.40, 6).round(3))  # query preservation
 
-    # ── Config modèle ─────────────────────────────────────────────────────────
+    # ── Model config ─────────────────────────────────────────────────────────
     steps = 50
     up_blocks = [2, 3]
     model_id = "runwayml/stable-diffusion-v1-5"
@@ -75,17 +77,17 @@ def main():
         target_length=target_length,
     )
 
-    # ── Chargement audio ──────────────────────────────────────────────────────
+    # ── Audio loading ──────────────────────────────────────────────────────
     print(f"Loading style  : {style}")
     print(f"Loading content: {content}")
     style_audio = load_audio(style, cfg.sample_rate, duration)
     content_audio = load_audio(content, cfg.sample_rate, duration)
 
-    # ── Pipeline (modèle chargé une seule fois) ───────────────────────────────
+    # ── Pipeline (model loaded once) ───────────────────────────────────────
     pipeline = StylusPipeline(cfg)
     pipeline.load_model()
 
-    # ── Grid search sur 64 candidats (α × γ) ─────────────────────────────────
+    # ── Grid search over 64 candidates (α × γ) ───────────────────────────────
     candidates = generate_candidates(
         pipeline,
         style_audio,
