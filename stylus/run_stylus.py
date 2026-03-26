@@ -5,7 +5,7 @@ import soundfile as sf
 import librosa
 
 from stylus import StylusConfig, StylusPipeline
-from best_of_n import generate_candidates
+from stylus.tts_grid_search import generate_candidates
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -34,8 +34,8 @@ def save_audio(path: str, audio: np.ndarray, sr: int):
 
 def main():
     # ── Audio files ────────────────────────────────────────────────────────
-    style = "musicTI_dataset/audios/timbre/harmonica/harmonica2.wav"
-    content = "musicTI_dataset/audios/content/hiphop/hiphop1.wav"
+    style = "musicTI_dataset/timbre/harmonica/harmonica2.wav"
+    content = "musicTI_dataset/content/hiphop/hiphop1.wav"
 
     dir = (
         style.split("/")[-1].split(".")[0] + "_" + content.split("/")[-1].split(".")[0]

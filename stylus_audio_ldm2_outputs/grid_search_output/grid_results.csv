@@ -1,0 +1,4 @@
+run_id,alpha,gamma,use_audio_prompt,output_path,duration_s,status
+a0.00_g0.00,0.0,0.0,False,stylus_audio_ldm2_outputs/grid_search_output/a0.00_g0.00/stylized_g0.0_a0.0_uncond.wav,52.6,ok
+a0.00_g0.14,0.0,0.1429,False,stylus_audio_ldm2_outputs/grid_search_output/a0.00_g0.14/stylized_g0.1429_a0.0_uncond.wav,50.7,ok
+a0.00_g0.29,0.0,0.2857,False,stylus_audio_ldm2_outputs/grid_search_output/a0.00_g0.29/stylized_g0.2857_a0.0_uncond.wav,50.5,ok
