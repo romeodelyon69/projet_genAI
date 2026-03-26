@@ -114,7 +114,7 @@ def _run_one(
 def generate_samples(
     content_path: str,
     style_path: str,
-    save_dir: str = "./bon_musicldm",
+    save_dir: str = "./musicLDM_outputs/bon_musicldm",
     n_samples: int = 64,
     strength: float = 0.7,
     guidance_scale: float = 10.0,
@@ -337,9 +337,9 @@ def plot_bon_curves(
 
 if __name__ == "__main__":
     # ── Parameters ───────────────────────────────────────────────────────────
-    content_path = "./musicTI_dataset/thefatrat_unity.wav"
+    content_path = "./musicTI_dataset/other/thefatrat_unity.wav"
     style_path = "./musicTI_dataset/timbre/bird/bird1.wav"
-    save_dir = "./bon_musicldm"
+    save_dir = "./musicLDM_outputs/bon_musicldm"
     n_samples = 64  # number of stochastic samples to generate
     strength = 0.7  # 0.4 = stay close to content, 0.9 = heavy restyle
     guidance_scale = 5.0

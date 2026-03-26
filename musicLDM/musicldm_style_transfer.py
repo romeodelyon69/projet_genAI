@@ -445,11 +445,11 @@ def main(
 
 
 if __name__ == "__main__":
-    input_path = "./music4.wav"  # audio to stylize
+    input_path = "./musicTI_dataset/other/thefatrat_unity.wav"  # audio to stylize
     style_audio_path = (
         "./musicTI_dataset/timbre/bird/bird1.wav"  # style reference audio
     )
-    output_dir = "./encode_decode"
+    output_dir = "./musicLDM_outputs/encode_decode"
     strength = 0.4  # 0.6-0.8 recommended; 1.0 = pure generation
     guidance = 10.0  # 10-15 for strong style adherence
     steps = 100
