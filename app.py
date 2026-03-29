@@ -24,7 +24,12 @@ sys.path.insert(0, os.path.join(ROOT, "stylus"))
 sys.path.insert(0, os.path.join(ROOT, "musicLDM"))
 sys.path.insert(0, os.path.join(ROOT, "stylus-audio_LDM2"))
 
-DATASET_ROOT = os.path.join(ROOT, "musicTI_dataset", "audios")
+_base = os.path.join(ROOT, "musicTI_dataset")
+DATASET_ROOT = (
+    os.path.join(_base, "audios")
+    if os.path.isdir(os.path.join(_base, "audios"))
+    else _base
+)
 CONTENT_DIR = os.path.join(DATASET_ROOT, "content")
 STYLE_DIR = os.path.join(DATASET_ROOT, "timbre")
 OUTPUT_DIR = os.path.join(ROOT, "static", "outputs")
@@ -53,6 +58,7 @@ _models_lock = threading.Lock()
 def clear_vram():
     """Release all GPU memory."""
     import gc
+
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -67,18 +73,25 @@ def save_wav(path, audio, sr):
 
 def list_audio_files_in(directory):
     exts = {".wav", ".mp3", ".flac", ".ogg"}
-    return sorted(f for f in os.listdir(directory)
-                  if os.path.splitext(f)[1].lower() in exts)
+    return sorted(
+        f for f in os.listdir(directory) if os.path.splitext(f)[1].lower() in exts
+    )
 
 
 # ── Model loading (fresh each time, freed after use) ────────────────────────
 def load_stylus():
     from stylus import StylusConfig, StylusPipeline
-    device = "cuda" if torch.cuda.is_available() else (
-        "mps" if torch.backends.mps.is_available() else "cpu")
+
+    device = (
+        "cuda"
+        if torch.cuda.is_available()
+        else ("mps" if torch.backends.mps.is_available() else "cpu")
+    )
     cfg = StylusConfig(
-        alpha=STYLUS_ALPHA, gamma=STYLUS_GAMMA,
-        num_inference_steps=STYLUS_STEPS, device=device,
+        alpha=STYLUS_ALPHA,
+        gamma=STYLUS_GAMMA,
+        num_inference_steps=STYLUS_STEPS,
+        device=device,
         dtype=torch.float32 if device == "cpu" else torch.float16,
     )
     pipe = StylusPipeline(cfg)
@@ -88,8 +101,10 @@ def load_stylus():
 
 def load_audioldm2():
     from stylus_audioldm2_v4 import StylusAudioLDM2Config, StylusAudioLDM2Pipeline
+
     cfg = StylusAudioLDM2Config(
-        alpha=AUDIOLDM2_ALPHA, gamma=AUDIOLDM2_GAMMA,
+        alpha=AUDIOLDM2_ALPHA,
+        gamma=AUDIOLDM2_GAMMA,
         num_inference_steps=AUDIOLDM2_STEPS,
         skip_roundtrip_check=True,
     )
@@ -101,8 +116,10 @@ def load_audioldm2():
 def load_musicldm():
     import musicldm_style_transfer as mldm
     from diffusers import MusicLDMPipeline, DDIMScheduler
+
     pipe = MusicLDMPipeline.from_pretrained(
-        mldm.MODEL_ID, torch_dtype=torch.float32,
+        mldm.MODEL_ID,
+        torch_dtype=torch.float32,
     ).to(mldm.DEVICE)
     pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     return pipe, mldm
@@ -129,7 +146,9 @@ def run_stylus(content_path, style_path, out_dir, params):
                 wav = np.pad(wav, (0, target - len(wav)))
             return wav.astype(np.float32)
 
-        audio_out = pipe.transfer(_load(style_path), _load(content_path), save_dir=out_dir)
+        audio_out = pipe.transfer(
+            _load(style_path), _load(content_path), save_dir=out_dir
+        )
         out_path = os.path.join(out_dir, "output.wav")
         save_wav(out_path, audio_out, sr)
 
@@ -148,7 +167,9 @@ def run_audioldm2(content_path, style_path, out_dir, params):
         pipe.cfg.alpha = alpha
         pipe.cfg.gamma = gamma
         pipe.cfg.num_inference_steps = steps
-        pipe.transfer(style_path=style_path, content_path=content_path, output_dir=out_dir)
+        pipe.transfer(
+            style_path=style_path, content_path=content_path, output_dir=out_dir
+        )
         out_path = os.path.join(out_dir, "output.wav")
         for f in os.listdir(out_dir):
             if f.startswith("stylized_") and f.endswith(".wav"):
@@ -173,8 +194,8 @@ def run_musicldm(content_path, style_path, out_dir, params):
         def _pad(wav):
             if len(wav) < mldm.CHUNK_SAMPLES:
                 rep = int(np.ceil(mldm.CHUNK_SAMPLES / len(wav)))
-                return np.tile(wav, rep)[:mldm.CHUNK_SAMPLES]
-            return wav[:mldm.CHUNK_SAMPLES]
+                return np.tile(wav, rep)[: mldm.CHUNK_SAMPLES]
+            return wav[: mldm.CHUNK_SAMPLES]
 
         wav_content = _pad(mldm.load_audio(content_path))
         wav_style = _pad(mldm.load_audio(style_path))
@@ -248,9 +269,9 @@ def api_generate():
     style_file = data.get("style_file", "")
 
     content_path = os.path.normpath(
-        os.path.join(CONTENT_DIR, content_cat, content_file))
-    style_path = os.path.normpath(
-        os.path.join(STYLE_DIR, style_cat, style_file))
+        os.path.join(CONTENT_DIR, content_cat, content_file)
+    )
+    style_path = os.path.normpath(os.path.join(STYLE_DIR, style_cat, style_file))
 
     # Security: validate paths stay within dataset
     if not content_path.startswith(os.path.normpath(CONTENT_DIR)):
@@ -291,9 +312,11 @@ def api_generate_single(model_name):
 
     data = request.json
     content_path = os.path.normpath(
-        os.path.join(CONTENT_DIR, data["content_category"], data["content_file"]))
+        os.path.join(CONTENT_DIR, data["content_category"], data["content_file"])
+    )
     style_path = os.path.normpath(
-        os.path.join(STYLE_DIR, data["style_category"], data["style_file"]))
+        os.path.join(STYLE_DIR, data["style_category"], data["style_file"])
+    )
 
     if not content_path.startswith(os.path.normpath(CONTENT_DIR)):
         return jsonify({"error": "Invalid content path"}), 400
@@ -313,11 +336,13 @@ def api_generate_single(model_name):
     try:
         out_path = MODEL_RUNNERS[model_name](content_path, style_path, out_dir, params)
         rel = os.path.relpath(out_path, os.path.join(ROOT, "static"))
-        return jsonify({
-            "status": "ok",
-            "model": model_name,
-            "url": f"/static/{rel.replace(os.sep, '/')}",
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "model": model_name,
+                "url": f"/static/{rel.replace(os.sep, '/')}",
+            }
+        )
     except Exception:
         tb = traceback.format_exc()
         print(f"[ERROR] {model_name}:\n{tb}")
@@ -337,5 +362,5 @@ if __name__ == "__main__":
 
     print(f"\n  Dataset:  {DATASET_ROOT}")
     print(f"  Outputs:  {OUTPUT_DIR}")
-    print(f"  Open:     http://localhost:5000\n")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    print(f"  Open:     http://localhost:5001\n")
+    app.run(host="0.0.0.0", port=5001, debug=False)
