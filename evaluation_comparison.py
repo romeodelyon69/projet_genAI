@@ -29,16 +29,17 @@ import torch
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, "stylus"))
 sys.path.insert(0, os.path.join(ROOT, "musicLDM"))
+sys.path.insert(0, os.path.join(ROOT, "stylus-audio_LDM2"))
 
 # ─── Scoring ─────────────────────────────────────────────────────────────────
-from score_clap import clap_scores
+from scores_clap import clap_scores
 from score_combined import combined_score
 
 # ─── Models ──────────────────────────────────────────────────────────────────
 from stylus import StylusConfig, StylusPipeline
 from stylus_audioldm2_v5 import StylusAudioLDM2Config, StylusAudioLDM2Pipeline
 from diffusers import MusicLDMPipeline, DDIMScheduler
-import musicldm_style_transferClaude as mldm
+import musicldm_style_transfer as mldm
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dataset subset

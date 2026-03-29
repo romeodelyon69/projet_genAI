@@ -1,26 +1,8 @@
 """
-Stylus-AudioLDM2 : Music Style Transfer via AudioLDM2  — v4 (corrected)
+Stylus-AudioLDM2 : Music Style Transfer via AudioLDM2  — v4 
 =========================================================================
 Adaptation of "Stylus: Repurposing Stable Diffusion for Training-Free
 Music Style Transfer" (arxiv:2411.15913) for AudioLDM2.
-
-Fixes v4 vs v3:
-  1. Mel preprocessing aligned with AudioLDM2 training (hop=160, fmax=8000)
-  2. T5 projection: full sequence (no more truncation to 1 token)
-  3. Vocoder decode: uses official pipe.mel_spectrogram_to_waveform()
-  4. Attention processor compatible with AttnProcessor v1 AND v2 (recent diffusers)
-  5. Roundtrip verification: encode→decode and inversion→reverse
-  6. AdaIN on temporal dimension only (not time×frequency mixed)
-  7. Reduced layer targeting by default (up_blocks 2,3 only)
-
-WARNING:
-  The fundamental assumption of Stylus (Q=structure, K/V=style in
-  self-attention) has been empirically validated for IMAGES (SD1.5).
-  Nothing guarantees this decomposition holds for audio.
-  Timbre is distributed across the entire frequency representation,
-  it is not a separable "spatial texture" as in an image.
-  This code fixes technical bugs but the result may still be
-  disappointing for fundamental reasons.
 """
 
 import os

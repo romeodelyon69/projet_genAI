@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Style Transfer — Comparison</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #242837;
+            --border: #2e3346;
+            --accent: #6c63ff;
+            --accent-hover: #7f78ff;
+            --accent-glow: rgba(108, 99, 255, .25);
+            --text: #e4e6f0;
+            --text2: #9498b0;
+            --success: #4ade80;
+            --error: #f87171;
+            --warning: #fbbf24;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ────────────────────────────────────── */
+        header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, #14162080, transparent);
+        }
+        header h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: -.02em;
+        }
+        header h1 span { color: var(--accent); }
+        header p { color: var(--text2); font-size: .9rem; margin-top: .4rem; }
+
+        /* ── Main layout ───────────────────────────────── */
+        .app {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* ── Panels ────────────────────────────────────── */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        .panel-title {
+            font-size: .85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--text2);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .panel-title .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-style { background: var(--accent); }
+        .dot-content { background: var(--success); }
+        .dot-result { background: var(--warning); }
+
+        /* ── Select / Dropdown ─────────────────────────── */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-size: .8rem;
+            color: var(--text2);
+            margin-bottom: .35rem;
+        }
+        select {
+            width: 100%;
+            padding: .55rem .75rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: .9rem;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239498b0'%3E%3Cpath d='M6 8.5L1 3.5h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right .75rem center;
+        }
+        select:hover { border-color: var(--accent); }
+        select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+        /* ── Audio player ──────────────────────────────── */
+        .audio-preview {
+            margin-top: .75rem;
+            padding: .75rem;
+            background: var(--surface2);
+            border-radius: 8px;
+            display: none;
+        }
+        .audio-preview.active { display: block; }
+        .audio-preview audio {
+            width: 100%;
+            height: 40px;
+            outline: none;
+        }
+        .audio-preview .filename {
+            font-size: .75rem;
+            color: var(--text2);
+            margin-bottom: .4rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Generate button ───────────────────────────── */
+        .generate-section { text-align: center; margin-bottom: 1.5rem; }
+
+        .btn-generate {
+            padding: .75rem 2.5rem;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+            letter-spacing: .02em;
+        }
+        .btn-generate:hover:not(:disabled) {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 20px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+        .btn-generate:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        /* ── Results grid ──────────────────────────────── */
+        .results-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        .result-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            position: relative;
+            transition: border-color .3s;
+        }
+        .result-card.ready { border-color: var(--success); }
+        .result-card.error { border-color: var(--error); }
+
+        .result-card h3 {
+            font-size: .95rem;
+            font-weight: 600;
+            margin-bottom: .25rem;
+        }
+        .result-card .model-desc {
+            font-size: .75rem;
+            color: var(--text2);
+            margin-bottom: 1rem;
+        }
+
+        .result-status {
+            padding: 2rem 1rem;
+            color: var(--text2);
+            font-size: .85rem;
+        }
+
+        .result-card audio {
+            width: 100%;
+            height: 40px;
+            margin-top: .75rem;
+        }
+
+        /* ── Spinner ───────────────────────────────────── */
+        .spinner {
+            display: inline-block;
+            width: 28px; height: 28px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+            margin-bottom: .5rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Progress bar ──────────────────────────────── */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--surface2);
+            border-radius: 2px;
+            margin-top: .75rem;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar.active { display: block; }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            width: 0%;
+            transition: width .5s ease;
+        }
+        .progress-bar-fill.indeterminate {
+            width: 40%;
+            animation: indeterminate 1.5s ease-in-out infinite;
+        }
+        @keyframes indeterminate {
+            0% { margin-left: -40%; }
+            100% { margin-left: 100%; }
+        }
+
+        /* ── Error display ─────────────────────────────── */
+        .error-msg {
+            color: var(--error);
+            font-size: .8rem;
+            text-align: left;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: .5rem;
+            background: rgba(248,113,113,.08);
+            border-radius: 6px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        /* ── Param controls ────────────────────────────── */
+        .params-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .5rem .75rem;
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .param-group label {
+            display: block;
+            font-size: .7rem;
+            color: var(--text2);
+            margin-bottom: .2rem;
+        }
+        .param-group input {
+            width: 100%;
+            padding: .4rem .55rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: .85rem;
+            outline: none;
+        }
+        .param-group input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        /* ── Responsive ────────────────────────────────── */
+        @media (max-width: 900px) {
+            .input-row { grid-template-columns: 1fr; }
+            .results-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Audio <span>Style Transfer</span> — Comparison</h1>
+    <p>Stylus (SD 1.5) &middot; StylusAudioLDM2 &middot; MusicLDM</p>
+</header>
+
+<div class="app">
+
+    <!-- ── Input: Style + Content ─────────────────────── -->
+    <div class="input-row">
+
+        <!-- Style column -->
+        <div class="panel">
+            <div class="panel-title"><span class="dot dot-style"></span> Style (Timbre)</div>
+            <div class="form-group">
+                <label for="style-cat">Category</label>
+                <select id="style-cat"><option value="">Loading...</option></select>
+            </div>
+            <div class="form-group">
+                <label for="style-file">Audio file</label>
+                <select id="style-file"><option value="">--</option></select>
+            </div>
+            <div class="audio-preview" id="style-preview">
+                <div class="filename" id="style-filename"></div>
+                <audio id="style-audio" controls preload="none"></audio>
+            </div>
+        </div>
+
+        <!-- Content column -->
+        <div class="panel">
+            <div class="panel-title"><span class="dot dot-content"></span> Content</div>
+            <div class="form-group">
+                <label for="content-cat">Category</label>
+                <select id="content-cat"><option value="">Loading...</option></select>
+            </div>
+            <div class="form-group">
+                <label for="content-file">Audio file</label>
+                <select id="content-file"><option value="">--</option></select>
+            </div>
+            <div class="audio-preview" id="content-preview">
+                <div class="filename" id="content-filename"></div>
+                <audio id="content-audio" controls preload="none"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Generate button ────────────────────────────── -->
+    <div class="generate-section">
+        <button class="btn-generate" id="btn-generate" disabled>Generate</button>
+        <div class="progress-bar" id="global-progress">
+            <div class="progress-bar-fill" id="global-progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- ── Results ────────────────────────────────────── -->
+    <div class="results-row">
+        <div class="result-card" id="result-Stylus">
+            <h3>Stylus</h3>
+            <div class="model-desc">Stable Diffusion 1.5 + Mel Spectrograms</div>
+            <div class="params-grid">
+                <div class="param-group">
+                    <label for="p-stylus-alpha">Alpha (style)</label>
+                    <input type="number" id="p-stylus-alpha" value="0.9" min="0" max="1" step="0.05">
+                </div>
+                <div class="param-group">
+                    <label for="p-stylus-gamma">Gamma (query preserv.)</label>
+                    <input type="number" id="p-stylus-gamma" value="0.1" min="0" max="1" step="0.05">
+                </div>
+                <div class="param-group">
+                    <label for="p-stylus-steps">Steps</label>
+                    <input type="number" id="p-stylus-steps" value="50" min="10" max="200" step="5">
+                </div>
+                <div class="param-group">
+                    <label for="p-stylus-duration">Duration (s)</label>
+                    <input type="number" id="p-stylus-duration" value="5.0" min="1" max="30" step="0.5">
+                </div>
+            </div>
+            <div class="result-status" id="status-Stylus">Waiting...</div>
+        </div>
+        <div class="result-card" id="result-StylusAudioLDM2">
+            <h3>StylusAudioLDM2</h3>
+            <div class="model-desc">AudioLDM2-Music + Attention Injection</div>
+            <div class="params-grid">
+                <div class="param-group">
+                    <label for="p-aldm2-alpha">Alpha (style)</label>
+                    <input type="number" id="p-aldm2-alpha" value="0.9" min="0" max="1" step="0.05">
+                </div>
+                <div class="param-group">
+                    <label for="p-aldm2-gamma">Gamma (query preserv.)</label>
+                    <input type="number" id="p-aldm2-gamma" value="0.1" min="0" max="1" step="0.05">
+                </div>
+                <div class="param-group">
+                    <label for="p-aldm2-steps">Steps</label>
+                    <input type="number" id="p-aldm2-steps" value="50" min="10" max="200" step="5">
+                </div>
+            </div>
+            <div class="result-status" id="status-StylusAudioLDM2">Waiting...</div>
+        </div>
+        <div class="result-card" id="result-MusicLDM">
+            <h3>MusicLDM</h3>
+            <div class="model-desc">MusicLDM + CLAP Audio Encoder</div>
+            <div class="params-grid">
+                <div class="param-group">
+                    <label for="p-mldm-strength">Strength</label>
+                    <input type="number" id="p-mldm-strength" value="0.7" min="0" max="1" step="0.05">
+                </div>
+                <div class="param-group">
+                    <label for="p-mldm-guidance">Guidance scale</label>
+                    <input type="number" id="p-mldm-guidance" value="10" min="1" max="30" step="0.5">
+                </div>
+                <div class="param-group">
+                    <label for="p-mldm-steps">Steps</label>
+                    <input type="number" id="p-mldm-steps" value="50" min="10" max="200" step="5">
+                </div>
+            </div>
+            <div class="result-status" id="status-MusicLDM">Waiting...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const MODELS = ["Stylus", "StylusAudioLDM2", "MusicLDM"];
+let catalogData = { content: {}, style: {} };
+
+// ── Init: load categories ────────────────────────────
+async function init() {
+    const res = await fetch("/api/categories");
+    catalogData = await res.json();
+
+    populateSelect("style-cat", Object.keys(catalogData.style));
+    populateSelect("content-cat", Object.keys(catalogData.content));
+
+    document.getElementById("style-cat").addEventListener("change", () => {
+        const cat = document.getElementById("style-cat").value;
+        populateSelect("style-file", catalogData.style[cat] || []);
+        hidePreview("style");
+    });
+    document.getElementById("content-cat").addEventListener("change", () => {
+        const cat = document.getElementById("content-cat").value;
+        populateSelect("content-file", catalogData.content[cat] || []);
+        hidePreview("content");
+    });
+
+    document.getElementById("style-file").addEventListener("change", () => {
+        const cat = document.getElementById("style-cat").value;
+        const file = document.getElementById("style-file").value;
+        if (file) showPreview("style", `timbre/${cat}/${file}`);
+        else hidePreview("style");
+        updateGenerateBtn();
+    });
+    document.getElementById("content-file").addEventListener("change", () => {
+        const cat = document.getElementById("content-cat").value;
+        const file = document.getElementById("content-file").value;
+        if (file) showPreview("content", `content/${cat}/${file}`);
+        else hidePreview("content");
+        updateGenerateBtn();
+    });
+
+    document.getElementById("btn-generate").addEventListener("click", generate);
+
+    // Trigger first selection
+    if (Object.keys(catalogData.style).length) {
+        document.getElementById("style-cat").value = Object.keys(catalogData.style)[0];
+        document.getElementById("style-cat").dispatchEvent(new Event("change"));
+    }
+    if (Object.keys(catalogData.content).length) {
+        document.getElementById("content-cat").value = Object.keys(catalogData.content)[0];
+        document.getElementById("content-cat").dispatchEvent(new Event("change"));
+    }
+}
+
+function populateSelect(id, options) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">-- Select --</option>';
+    options.forEach(opt => {
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        sel.appendChild(o);
+    });
+}
+
+function showPreview(type, path) {
+    const preview = document.getElementById(`${type}-preview`);
+    const audio = document.getElementById(`${type}-audio`);
+    const fname = document.getElementById(`${type}-filename`);
+    audio.src = `/api/audio/${path}`;
+    fname.textContent = path.split("/").pop();
+    preview.classList.add("active");
+}
+
+function hidePreview(type) {
+    document.getElementById(`${type}-preview`).classList.remove("active");
+}
+
+function updateGenerateBtn() {
+    const ok = document.getElementById("style-file").value &&
+               document.getElementById("content-file").value;
+    document.getElementById("btn-generate").disabled = !ok;
+}
+
+// ── Generate: call each model sequentially ───────────
+async function generate() {
+    const btn = document.getElementById("btn-generate");
+    btn.disabled = true;
+    btn.textContent = "Generating...";
+
+    const payload = {
+        content_category: document.getElementById("content-cat").value,
+        content_file: document.getElementById("content-file").value,
+        style_category: document.getElementById("style-cat").value,
+        style_file: document.getElementById("style-file").value,
+        run_id: crypto.randomUUID().slice(0, 8),
+        params: {
+            Stylus: {
+                alpha: parseFloat(document.getElementById("p-stylus-alpha").value),
+                gamma: parseFloat(document.getElementById("p-stylus-gamma").value),
+                steps: parseInt(document.getElementById("p-stylus-steps").value),
+                duration: parseFloat(document.getElementById("p-stylus-duration").value),
+            },
+            StylusAudioLDM2: {
+                alpha: parseFloat(document.getElementById("p-aldm2-alpha").value),
+                gamma: parseFloat(document.getElementById("p-aldm2-gamma").value),
+                steps: parseInt(document.getElementById("p-aldm2-steps").value),
+            },
+            MusicLDM: {
+                strength: parseFloat(document.getElementById("p-mldm-strength").value),
+                guidance_scale: parseFloat(document.getElementById("p-mldm-guidance").value),
+                steps: parseInt(document.getElementById("p-mldm-steps").value),
+            },
+        },
+    };
+
+    // Reset all cards
+    MODELS.forEach(m => {
+        const card = document.getElementById(`result-${m}`);
+        card.classList.remove("ready", "error");
+        document.getElementById(`status-${m}`).innerHTML =
+            '<div class="spinner"></div><div>Waiting...</div>';
+    });
+
+    const progressBar = document.getElementById("global-progress");
+    const progressFill = document.getElementById("global-progress-fill");
+    progressBar.classList.add("active");
+    progressFill.style.width = "0%";
+
+    let done = 0;
+
+    for (const model of MODELS) {
+        document.getElementById(`status-${model}`).innerHTML =
+            `<div class="spinner"></div><div>Loading model and running inference...</div>`;
+
+        try {
+            const res = await fetch(`/api/generate/${model}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (data.status === "ok") {
+                document.getElementById(`status-${model}`).innerHTML =
+                    `<div style="color:var(--success); font-weight:600; margin-bottom:.5rem;">Done</div>
+                     <audio controls preload="auto" src="${data.url}"></audio>`;
+                document.getElementById(`result-${model}`).classList.add("ready");
+            } else {
+                throw new Error(data.error || "Unknown error");
+            }
+        } catch (err) {
+            document.getElementById(`status-${model}`).innerHTML =
+                `<div style="color:var(--error); font-weight:600; margin-bottom:.5rem;">Error</div>
+                 <div class="error-msg">${err.message}</div>`;
+            document.getElementById(`result-${model}`).classList.add("error");
+        }
+
+        done++;
+        progressFill.style.width = `${(done / MODELS.length) * 100}%`;
+    }
+
+    btn.disabled = false;
+    btn.textContent = "Generate";
+    setTimeout(() => {
+        progressBar.classList.remove("active");
+    }, 1000);
+}
+
+init();
+</script>
+</body>
+</html>
