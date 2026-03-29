@@ -4,8 +4,11 @@ import torch
 import soundfile as sf
 import librosa
 
+import sys, os
+
+sys.path.insert(0, os.path.dirname(__file__))
 from stylus import StylusConfig, StylusPipeline
-from stylus.tts_grid_search import generate_candidates
+from tts_grid_search import generate_candidates
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -40,7 +43,9 @@ def main():
     dir = (
         style.split("/")[-1].split(".")[0] + "_" + content.split("/")[-1].split(".")[0]
     )
-    save_dir = "./test_outputs/" + dir + "/" + "grid_search"
+    save_dir = os.path.join(
+        os.path.dirname(__file__), "..", "stylus_outputs", dir, "grid_search"
+    )
     duration = 5.0
 
     # Proportional adjustment of image size (512px for 5s)

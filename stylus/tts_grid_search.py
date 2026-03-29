@@ -19,7 +19,7 @@ import numpy as np
 import soundfile as sf
 
 from score_combined import combined_score
-from stylus.scores_clap import clap_scores
+from scores_clap import clap_scores
 
 
 # ─────────────────────────────────────────────────────────────────────────────

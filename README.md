@@ -1,6 +1,6 @@
 # Music Style Transfer — Multimodal GenAI Project
 
-Training-free music style transfer: given a **content** audio and a **style** audio, produce an output that preserves the melodic/rhythmic structure of the content while adopting the timbre of the style.
+Training-free music style transfer: given a **content** audio and a **style** audio, we seek to produce an output that preserves the melodic/rhythmic structure of the content while adopting the timbre of the style.
 
 Three models are implemented and compared.
 
@@ -10,15 +10,19 @@ Three models are implemented and compared.
 
 ```
 projet_genAI/
-├── musicTI_dataset/          # Shared dataset (content/ + timbre/)
-├── evaluation_comparison.py  # Cross-model evaluation script
+├── musicTI_dataset/              # Shared dataset (content/ + timbre/)
+├── evaluation_comparison.py      # Cross-model evaluation script
 │
-├── stylus/                   # Model 1 — Stylus
-│   └── stylus_outputs/
-├── stylus-audio_LDM2/        # Model 2 — StylusAudioLDM2
-│   └── stylus-audio_LDM2_outputs/
-├── musicLDM/                 # Model 3 — MusicLDM
-│   └── musicLDM_outputs/
+├── stylus/                       # Model 1 — Stylus
+├── stylus_outputs/               # Stylus outputs
+├── stylus-audio_LDM2/            # Model 2 — StylusAudioLDM2
+├── stylus-audio_LDM2_outputs/    # StylusAudioLDM2 outputs
+├── musicLDM/                     # Model 3 — MusicLDM
+├── musicLDM_outputs/             # MusicLDM outputs
+│
+└── demo/                         # Flask web demo
+    ├── app.py                    # Demo entry point
+    ├── templates/                # HTML templates
 ```
 
 ---
@@ -31,7 +35,7 @@ Repurposes **Stable Diffusion 1.5** for audio style transfer via attention injec
 
 - **Mechanism**: DDIM inversion of style (captures K, V) + inversion of content (captures Q) + AdaIN on latents + DDIM reverse with injection Q←γ·Q_content + (1−γ)·Q_current and out ← out_content + α·(out_style − out_content)
 - **Key hyperparameters**: `alpha` (style strength), `gamma` (content preservation)
-- **TTS / tuning**: `tts_grid_search.py` — 8α × 8γ = 64-run grid + Best-of-N analysis + E[best-of-N] vs N curves
+- **TTS / tuning**: `tts_grid_search.py` — 8α × 8γ = 64-run grid 
 - **Outputs**: `stylus_outputs/`
 - **Scoring**: `score_combined.py`, `scores_clap.py`, `plot_scores.py`
 
@@ -74,6 +78,7 @@ Compares all 3 models on (content, style) pairs drawn from `musicTI_dataset/`.
 musicTI_dataset/
 ├── content/     # Categories: hiphop, violin, piano, adventure, color, ...
 └── timbre/      # Categories: accordion, bird, chime, clarinet, erhu, ...
+└── other/       # Other content musics : TheFatRat Unity
 ```
 
 Each category contains ~15 WAV files (16 kHz, mono).
@@ -87,10 +92,13 @@ Each category contains ~15 WAV files (16 kHz, mono).
 python stylus/run_stylus.py
 
 # StylusAudioLDM2 (single transfer)
-python stylus-audio_LDM2/stylus_audioldm2_v5.py
+python stylus-audio_LDM2/stylus_audioldm2_v4.py
 
 # StylusAudioLDM2 (grid search TTS)
 python stylus-audio_LDM2/tts_grid_search.py
+
+# MusicLDM (single transfer)
+python musicLDM/musicldm_style_transfer.py
 
 # MusicLDM (Best-of-N)
 python musicLDM/tts_best_of_n.py
@@ -99,4 +107,16 @@ python musicLDM/tts_best_of_n.py
 python evaluation_comparison.py
 ```
 
-> Conda environment: `CSC_MultimodalGenAI`
+---
+
+## Interactive demo — `app.py`
+
+A Flask web interface lets you run and compare the 3 models side-by-side directly from your browser.
+
+### Launch
+
+```bash
+python demo/app.py
+```
+
+Then open **http://localhost:5001** in your browser.

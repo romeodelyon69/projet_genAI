@@ -1,5 +1,5 @@
 """
-Stylus-AudioLDM2 : Music Style Transfer via AudioLDM2  — v4 
+Stylus-AudioLDM2 : Music Style Transfer via AudioLDM2  — v4
 =========================================================================
 Adaptation of "Stylus: Repurposing Stable Diffusion for Training-Free
 Music Style Transfer" (arxiv:2411.15913) for AudioLDM2.
@@ -61,8 +61,8 @@ class StylusAudioLDM2Config:
     roundtrip_snr_threshold: float = 5.0  # minimum dB for acceptable reconstruction
 
     # Files
-    style_audio_path: str = "musicTI_dataset/audios/timbre/chime/chime1.wav"
-    content_audio_path: str = "musicTI_dataset/audios/content/violin/violin1.wav"
+    style_audio_path: str = "musicTI_dataset/timbre/chime/chime1.wav"
+    content_audio_path: str = "musicTI_dataset/content/violin/violin1.wav"
     output_dir: str = "stylus_audioldm2_output"
 
 
@@ -301,8 +301,13 @@ class AudioProcessor:
         )
 
     def load_audio(self, path: str) -> np.ndarray:
+        # Support both musicTI_dataset/ and musicTI_dataset/audios/ layouts
         if not os.path.exists(path):
-            raise FileNotFoundError(f"Fichier introuvable : {path}")
+            alt = path.replace("musicTI_dataset/", "musicTI_dataset/audios/", 1)
+            if os.path.exists(alt):
+                path = alt
+            else:
+                raise FileNotFoundError(f"Fichier introuvable : {path}")
         dur = None if self.cfg.duration <= 0 else self.cfg.duration
         wav, _ = librosa.load(path, sr=self.sample_rate, mono=True, duration=dur)
         wav = wav / (np.abs(wav).max() + 1e-8)
@@ -876,9 +881,9 @@ def main():
         alpha=0.9,
         use_audio_prompt=True,
         num_inference_steps=50,
-        style_audio_path="musicTI_dataset/audios/timbre/chime/chime1.wav",
-        content_audio_path="musicTI_dataset/audios/content/violin/violin1.wav",
-        output_dir="stylus_audioldm2_output",
+        style_audio_path="musicTI_dataset/timbre/chime/chime1.wav",
+        content_audio_path="musicTI_dataset/content/violin/violin1.wav",
+        output_dir="stylus-audio_LDM2_outputs",
         # Disable checks for faster execution
         skip_roundtrip_check=False,
     )

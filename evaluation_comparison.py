@@ -46,9 +46,9 @@ import musicldm_style_transfer as mldm
 # ─────────────────────────────────────────────────────────────────────────────
 DATASET_ROOT = os.path.join(ROOT, "musicTI_dataset")
 
-# 3 content × 3 style = 9 pairs (1 file per category)
-CONTENT_CATEGORIES = ["hiphop", "violin", "piano"]
-STYLE_CATEGORIES = ["harmonica", "bird", "chime"]
+# 5 content × 5 style = 25 pairs (1 file per category)
+CONTENT_CATEGORIES = ["hiphop", "violin", "piano", "color", "relax"]
+STYLE_CATEGORIES = ["harmonica", "bird", "chime", "church_bell", "accordion"]
 FILES_PER_CAT = 1  # first file of each category
 
 EVAL_OUTDIR = os.path.join(ROOT, "evaluation_outputs")

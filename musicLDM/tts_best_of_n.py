@@ -54,7 +54,7 @@ from musicldm_style_transfer import (
 STYLUS_DIR = os.path.join(os.path.dirname(__file__), "..", "stylus")
 sys.path.insert(0, os.path.abspath(STYLUS_DIR))
 from score_combined import combined_score
-from score_clap import clap_scores
+from scores_clap import clap_scores
 
 from diffusers import MusicLDMPipeline, DDIMScheduler
 
