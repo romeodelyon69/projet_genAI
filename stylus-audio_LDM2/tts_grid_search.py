@@ -26,8 +26,8 @@ def main():
     alphas = np.linspace(0.0, 1.0, N).round(4)
     gammas = np.linspace(0.0, 1.0, N).round(4)
 
-    style_path = "musicTI_dataset/timbre/chime/chime1.wav"
-    content_path = "musicTI_dataset/content/violin/violin1.wav"
+    style_path = "musicTI_dataset/audios/timbre/chime/chime1.wav"
+    content_path = "musicTI_dataset/audios/content/violin/violin1.wav"
     base_out_dir = "stylus_audio_ldm2_outputs/grid_search_output"
     os.makedirs(base_out_dir, exist_ok=True)
 

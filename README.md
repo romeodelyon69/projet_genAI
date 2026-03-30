@@ -75,7 +75,7 @@ Compares all 3 models on (content, style) pairs drawn from `musicTI_dataset/`.
 ## Dataset — `musicTI_dataset/`
 
 ```
-musicTI_dataset/
+musicTI_dataset/audios/
 ├── content/     # Categories: hiphop, violin, piano, adventure, color, ...
 └── timbre/      # Categories: accordion, bird, chime, clarinet, erhu, ...
 └── other/       # Other content musics : TheFatRat Unity

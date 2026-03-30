@@ -337,8 +337,8 @@ def plot_bon_curves(
 
 if __name__ == "__main__":
     # ── Parameters ───────────────────────────────────────────────────────────
-    content_path = "./musicTI_dataset/other/thefatrat_unity.wav"
-    style_path = "./musicTI_dataset/timbre/bird/bird1.wav"
+    content_path = "./musicTI_dataset/audios/other/thefatrat_unity.wav"
+    style_path = "./musicTI_dataset/audios/timbre/bird/bird1.wav"
     save_dir = "./musicLDM_outputs/bon_musicldm"
     n_samples = 64  # number of stochastic samples to generate
     strength = 0.7  # 0.4 = stay close to content, 0.9 = heavy restyle

@@ -61,8 +61,8 @@ class StylusAudioLDM2Config:
     roundtrip_snr_threshold: float = 5.0  # minimum dB for acceptable reconstruction
 
     # Files
-    style_audio_path: str = "musicTI_dataset/timbre/chime/chime1.wav"
-    content_audio_path: str = "musicTI_dataset/content/violin/violin1.wav"
+    style_audio_path: str = "musicTI_dataset/audios/timbre/chime/chime1.wav"
+    content_audio_path: str = "musicTI_dataset/audios/content/violin/violin1.wav"
     output_dir: str = "stylus_audioldm2_output"
 
 
@@ -881,8 +881,8 @@ def main():
         alpha=0.9,
         use_audio_prompt=True,
         num_inference_steps=50,
-        style_audio_path="musicTI_dataset/timbre/chime/chime1.wav",
-        content_audio_path="musicTI_dataset/content/violin/violin1.wav",
+        style_audio_path="musicTI_dataset/audios/timbre/chime/chime1.wav",
+        content_audio_path="musicTI_dataset/audios/content/violin/violin1.wav",
         output_dir="stylus-audio_LDM2_outputs",
         # Disable checks for faster execution
         skip_roundtrip_check=False,
