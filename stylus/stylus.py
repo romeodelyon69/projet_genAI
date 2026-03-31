@@ -52,7 +52,7 @@ class StylusConfig:
     fmax: float = 8000.0
     target_length: int = 512
 
-    # Modèle
+    # Model
     model_id: str = "runwayml/stable-diffusion-v1-5"
     device: str = "cuda"
     dtype: torch.dtype = torch.float16
@@ -288,10 +288,10 @@ class AudioProcessor:
     #         fmax=cfg.fmax,
     #     )
 
-    #     # Enveloppe mel du content
+    #     # Content mel envelope
     #     mel_content_amp = np.sqrt(np.maximum(mel_fb @ (mag_content**2), 1e-10))
 
-    #     # Amplitude mel stylisée → aligner temporellement
+    #     # Stylized mel amplitude → align temporally
     #     mel_style_amp = librosa.db_to_amplitude(mel_db_stylized)
     #     T_mel = mel_style_amp.shape[1]
     #     if T_mel != T_stft:
@@ -303,18 +303,18 @@ class AudioProcessor:
     #         )
     #         mel_style_amp = tt.squeeze().numpy()
 
-    #     # Ratio spectral
+    #     # Spectral ratio
     #     ratio_mel = mel_style_amp / (mel_content_amp + 1e-10)
 
     #     from scipy.ndimage import uniform_filter1d
 
     #     ratio_mel = uniform_filter1d(ratio_mel, size=5, axis=1)
 
-    #     # Projeter ratio mel → STFT
+    #     # Project mel ratio → STFT
     #     mel_fb_norm = mel_fb / (mel_fb.sum(axis=0, keepdims=True) + 1e-10)
     #     ratio_stft = np.clip(mel_fb_norm.T @ ratio_mel, 0.0, 10.0)
 
-    #     # Magnitude stylisée × phase content
+    #     # Stylized magnitude × content phase
     #     stft_stylized = (mag_content * ratio_stft) * np.exp(1j * np.angle(content_stft))
 
     #     audio = librosa.istft(
@@ -330,19 +330,19 @@ class AudioProcessor:
         self, mel_db_stylized: np.ndarray, content_stft: np.ndarray
     ) -> np.ndarray:
         """
-        Reconstruction directe depuis le mel stylisé.
+        Direct reconstruction from the stylized mel.
 
-        Ancienne approche (spectral envelope transfer) :
-          mag_stylized = mag_content * ratio  ← ancré sur le content
-          → le style ne peut jamais dominer, même avec alpha=1 / gamma=0
+        Old approach (spectral envelope transfer):
+          mag_stylized = mag_content * ratio  ← anchored on content
+          → style can never dominate, even with alpha=1 / gamma=0
 
-        Approche correcte :
-          1. Mel stylisé → magnitude STFT directement (transposée pondérée)
-          2. Phase du content comme initialisation GL (ancre le timing)
-          3. 8 itérations GL pour la cohérence STFT
+        Correct approach:
+          1. Stylized mel → STFT magnitude directly (weighted transpose)
+          2. Content phase as GL initialization (anchors timing)
+          3. 8 GL iterations for STFT consistency
 
-        La magnitude vient entièrement du mel stylisé.
-        La phase du content ancre le rythme sans imposer sa magnitude.
+        Magnitude comes entirely from the stylized mel.
+        Content phase anchors the rhythm without imposing its magnitude.
         """
         cfg = self.cfg
         librosa = self.librosa
@@ -352,7 +352,7 @@ class AudioProcessor:
         # 1. Mel dB → amplitude mel
         mel_amp = librosa.db_to_amplitude(mel_db_stylized)
 
-        # Aligner temporellement
+        # Align temporally
         T_mel = mel_amp.shape[1]
         if T_mel != T_stft:
             import torch as _t, torch.nn.functional as _F
@@ -374,7 +374,7 @@ class AudioProcessor:
         mel_fb_norm = mel_fb / (mel_fb.sum(axis=0, keepdims=True) + 1e-10)
         mag_stft = np.maximum(mel_fb_norm.T @ mel_amp, 0.0)
 
-        # Supprimer artefacts HF au-delà de fmax
+        # Remove HF artifacts beyond fmax
         freqs = np.linspace(0, cfg.sample_rate / 2, mag_stft.shape[0])
         rolloff = cfg.fmax if cfg.fmax > 0 else cfg.sample_rate / 2
         mask = np.where(
@@ -382,7 +382,7 @@ class AudioProcessor:
         )
         mag_stft = mag_stft * mask[:, np.newaxis]
 
-        # 3. Griffin-Lim initialisé avec la phase du content
+        # 3. Griffin-Lim initialized with the content phase
         phase_init = np.angle(content_stft)
         stft_cur = mag_stft * np.exp(1j * phase_init)
 
@@ -525,11 +525,9 @@ class StylusPipeline:
                 continue
             module.set_processor(StylusAttnProcessor(self.store, name))
             installed += 1
-        print(f"StylusAttnProcessor installé sur {installed} couches.")
+        print(f"StylusAttnProcessor installed on {installed} layers.")
         if installed == 0:
-            raise RuntimeError(
-                "Aucune couche trouvée — vérifier target_up_block_indices."
-            )
+            raise RuntimeError("No layer found — check target_up_block_indices.")
 
     @torch.no_grad()
     def _encode(self, image: torch.Tensor) -> torch.Tensor:
@@ -648,7 +646,7 @@ class StylusPipeline:
         img_out = self._decode(z0_out)
         mel_norm = self.proc.image_to_mel_norm(img_out)
 
-        # Resize + re-normaliser avec les stats du content
+        # Resize + re-normalize with content stats
         import torch as _t, torch.nn.functional as _F
 
         tt = _t.from_numpy(mel_norm).float().unsqueeze(0).unsqueeze(0)
