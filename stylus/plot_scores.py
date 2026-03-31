@@ -159,7 +159,7 @@ def plot_heatmaps(
     save_path: str | None = None,
 ):
     score_keys = [
-        ("combined", "Combined score\n(λ·Mel_style + (1-λ)·MFCC_timbre)"),
+        ("combined", "Mel + MFCC score\n(λ·Mel_style + (1-λ)·MFCC_timbre)"),
         ("clap_style", "CLAP style score"),
         ("clap_content", "CLAP content score"),
         (
